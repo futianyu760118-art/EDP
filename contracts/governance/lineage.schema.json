@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/governance/lineage.schema.json",
+  "title": "Data Lineage 数据血缘契约",
+  "description": "每条正式数据必须可追溯：Source → Raw → Cleaning Rule → Standardization Rule → Entity Resolution → Classification Rule → Source Review → Management Review → Official Version → Archive（V1.1 第四十五节）。",
+  "type": "object",
+  "required": [
+    "lineage_id",
+    "source_record_id",
+    "official_version",
+    "timestamp",
+    "operator"
+  ],
+  "properties": {
+    "lineage_id": { "type": "string", "format": "uuid" },
+    "source_record_id": { "type": "string", "minLength": 1, "description": "源系统记录标识" },
+    "transformation_id": { "type": ["string", "null"], "format": "uuid", "description": "转换批次/流水标识" },
+    "cleaning_rule_version": { "type": ["string", "null"], "description": "清洗规则版本（rule_id@version）" },
+    "standardization_rule_version": { "type": ["string", "null"], "description": "标准化规则版本" },
+    "classification_version": { "type": ["string", "null"], "description": "分类版本" },
+    "source_review_ref": { "type": ["string", "null"], "format": "uuid", "description": "A2 本系统审核记录引用" },
+    "management_review_ref": { "type": ["string", "null"], "format": "uuid", "description": "A3 管理系统复审记录引用" },
+    "official_version": { "type": "string", "minLength": 1, "description": "成为正式事实的版本号" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "operator": { "type": "string", "minLength": 1, "description": "操作人/系统" }
+  },
+  "additionalProperties": true
+}

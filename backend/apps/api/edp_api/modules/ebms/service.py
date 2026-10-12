@@ -121,23 +121,23 @@ _OBJECTIVES = table(
 )
 
 _KPI_DEFINITIONS = table(
-    "kpi_definitions",
-    column("kpi_id", Uuid),
+    "metrics",
+    column("metric_id", Uuid),
     column("tenant_id", Uuid),
     column("code", Text),
     column("name", Text),
     column("unit", Text),
-    schema="management",
+    schema="metric",
 )
 
 _KPI_VALUES = table(
-    "kpi_values",
+    "metric_values",
     column("value_id", Uuid),
     column("tenant_id", Uuid),
-    column("kpi_id", Uuid),
+    column("metric_id", Uuid),
     column("period", Text),
     column("value", Numeric),
-    schema="management",
+    schema="metric",
 )
 
 _ACTIONS = table(
@@ -349,17 +349,18 @@ async def query_report_summary(
 
 
 async def _latest_kpis(sess: AsyncSession) -> list[KpiItem]:
-    """每 code 取 period 最近值（kpi_definitions join kpi_values）。
+    """每 code 取 period 最近值（Metric Registry：metric.metrics join
+    metric.metric_values——V1.2 T26 起 EBMS 指标全量走 Registry，前端零公式）。
 
     「最近」按 period 文本序（ISO 周 YYYY-Www 字典序 = 时间序）；无值的定义
     不在列（inner join）。排序 code ASC（响应稳定）。
     """
     latest = (
         select(
-            _KPI_VALUES.c.kpi_id.label("kpi_id"),
+            _KPI_VALUES.c.metric_id.label("metric_id"),
             func.max(_KPI_VALUES.c.period).label("max_period"),
         )
-        .group_by(_KPI_VALUES.c.kpi_id)
+        .group_by(_KPI_VALUES.c.metric_id)
         .subquery()
     )
     stmt = (
@@ -374,14 +375,14 @@ async def _latest_kpis(sess: AsyncSession) -> list[KpiItem]:
         .join(
             _KPI_VALUES,
             and_(
-                _KPI_VALUES.c.kpi_id == _KPI_DEFINITIONS.c.kpi_id,
+                _KPI_VALUES.c.metric_id == _KPI_DEFINITIONS.c.metric_id,
                 _KPI_VALUES.c.tenant_id == _KPI_DEFINITIONS.c.tenant_id,
             ),
         )
         .join(
             latest,
             and_(
-                latest.c.kpi_id == _KPI_VALUES.c.kpi_id,
+                latest.c.metric_id == _KPI_VALUES.c.metric_id,
                 latest.c.max_period == _KPI_VALUES.c.period,
             ),
         )

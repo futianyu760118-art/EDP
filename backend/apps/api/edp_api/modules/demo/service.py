@@ -235,6 +235,26 @@ _PURGE_SQL: tuple[str, ...] = (
     "DELETE FROM management.kpi_values WHERE tenant_id = :t",
     "DELETE FROM management.kpi_definitions WHERE tenant_id = :t",
     "DELETE FROM management.objectives WHERE tenant_id = :t",
+    # governance 段（V1.2 0014）：先子后父（review→admission→classification；
+    # clean_records 引用 raw_records + business_objects → 先于两者删）
+    "DELETE FROM governance.review_records WHERE tenant_id = :t",
+    "DELETE FROM governance.admission_records WHERE tenant_id = :t",
+    "DELETE FROM governance.object_classifications WHERE tenant_id = :t",
+    "DELETE FROM governance.object_tags WHERE tenant_id = :t",
+    "DELETE FROM governance.lineage WHERE tenant_id = :t",
+    "DELETE FROM governance.clean_records WHERE tenant_id = :t",
+    "DELETE FROM governance.raw_records WHERE tenant_id = :t",
+    "DELETE FROM governance.taxonomies WHERE tenant_id = :t",
+    "DELETE FROM governance.entity_aliases WHERE tenant_id = :t",
+    "DELETE FROM governance.dimensions WHERE tenant_id = :t",
+    "DELETE FROM governance.tags WHERE tenant_id = :t",
+    "DELETE FROM governance.cleaning_rules WHERE tenant_id = :t",
+    # result 段（V1.2 0015）：引用 business_objects → 先于其删
+    "DELETE FROM result.results WHERE tenant_id = :t",
+    # metric/value 段（V1.2 0016）：先子后父（values→metrics；value_ledger 独立）
+    "DELETE FROM metric.metric_values WHERE tenant_id = :t",
+    "DELETE FROM metric.metrics WHERE tenant_id = :t",
+    "DELETE FROM value.value_ledger WHERE tenant_id = :t",
     "DELETE FROM decision.records WHERE tenant_id = :t",
     "DELETE FROM action.actions WHERE tenant_id = :t",
     "DELETE FROM decision.cases WHERE tenant_id = :t",
@@ -772,6 +792,40 @@ _INSERT_KPI_VALUE_SQL = text("""
     ON CONFLICT DO NOTHING
 """)
 
+# Metric Registry 镜像（V1.2 T26）：与 management 段同数据双写——EBMS
+# reports 数据源（kpi_* 保留供 objectives 与既有兼容）；definition_owner
+# 域映射 + target_owner=M01_KERNEL（V1.2 第五节边界）。
+_METRIC_OWNERS = {
+    "on_time_delivery": "DELIVERY",
+    "inventory_turnover": "DELIVERY",
+    "risk_closure_rate": "MANAGEMENT",
+}
+_METRIC_DEFINITIONS = {
+    "on_time_delivery": "按承诺日期计算的准时交付订单比例",
+    "inventory_turnover": "库存周转次数（月度）",
+    "risk_closure_rate": "风险闭环处理比例",
+}
+
+_INSERT_METRIC_SQL = text("""
+    INSERT INTO metric.metrics
+        (metric_id, tenant_id, code, name, owner, definition_owner,
+         definition_source, target_owner, business_definition, unit,
+         version, effective_from, created_by, updated_by)
+    VALUES
+        (:metric_id, :t, :code, :name, :owner, :definition_owner, 'DOMAIN',
+         'M01_KERNEL', :business_definition, :unit, 1, now(), :actor, :actor)
+    ON CONFLICT DO NOTHING
+""")
+
+_INSERT_METRIC_VALUE_SQL = text("""
+    INSERT INTO metric.metric_values
+        (value_id, tenant_id, metric_id, period, value, source,
+         created_by, updated_by)
+    VALUES
+        (:value_id, :t, :metric_id, :period, :value, :source, :actor, :actor)
+    ON CONFLICT DO NOTHING
+""")
+
 
 def _month_period(anchor: datetime) -> str:
     """锚当月（YYYY-MM；锚恒为 UTC 截整点）。"""
@@ -797,6 +851,16 @@ def _mgmt_kpi_id(code: str) -> UUID:
 def _mgmt_value_id(code: str, period: str) -> UUID:
     """kpi_values 行幂等键（code + period；计划卡指定命名）。"""
     return uuid5(_NIL, f"seed-mgmt:{code}:{period}")
+
+
+def _metric_id(code: str) -> UUID:
+    """Metric Registry 行幂等键（code 唯一索引同语义）。"""
+    return uuid5(_NIL, f"seed-metric:{code}")
+
+
+def _metric_value_id(code: str, period: str) -> UUID:
+    """Metric 计量值幂等键（code + period）。"""
+    return uuid5(_NIL, f"seed-metric:{code}:{period}")
 
 
 async def _run_management_seed(
@@ -858,6 +922,34 @@ async def _run_management_seed(
                 },
             )
             inserted += max(result.rowcount, 0)
+        # Metric Registry 镜像（V1.2 T26）：同数据双写——EBMS reports 数据源
+        for spec in MGMT_KPI_DEFINITIONS:
+            await sess.execute(
+                _INSERT_METRIC_SQL,
+                {
+                    **params,
+                    "metric_id": _metric_id(spec.code),
+                    "code": spec.code,
+                    "name": spec.name,
+                    "owner": _METRIC_OWNERS[spec.code],
+                    "definition_owner": _METRIC_OWNERS[spec.code],
+                    "business_definition": _METRIC_DEFINITIONS[spec.code],
+                    "unit": spec.unit,
+                },
+            )
+        for spec in MGMT_KPI_VALUES:
+            period = _iso_week_period(anchor, spec.week_offset)
+            await sess.execute(
+                _INSERT_METRIC_VALUE_SQL,
+                {
+                    **params,
+                    "value_id": _metric_value_id(spec.code, period),
+                    "metric_id": _metric_id(spec.code),
+                    "period": period,
+                    "value": spec.value,
+                    "source": MGMT_VALUE_SOURCE,
+                },
+            )
         stats.mgmt_inserted = inserted
 
 

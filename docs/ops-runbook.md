@@ -43,3 +43,21 @@
 - 迁移失败阻断发布；契约变更走 `make contract-export` + api-sdk regen + `make contract-gate`；
 - 限流/缓存为单副本进程内语义（Redis 决策终局见 redis-evaluation.md §7，不引入）；
 - 备份「连续 3 天」以任务化连续 N≥3 次等价（W5-07 偏差口径）。
+
+---
+
+## V1.2 新增运维面（2026-10 迭代）
+
+- **schema**：governance(11 表)/result(1)/metric(2)/value(1)；迁移 0014~0017。
+- **worker**：outbox 分发与 admission 预审并发常驻（dmission_job.py，
+  60s 周期；governance.auto_source_machine_review 批量 100）。单租户异常
+  隔离，失败日志 edp.worker.admission。
+- **权限码**：governance:read/manage、admission:review、result:read/write、
+  metric:read/manage（矩阵见 rbac.py 0014~0016 注释）。
+- **门禁**：schema-gate（make schema-gate，13 份域契约 Draft 2020-12
+  校验）+ 既有 openapi 双门禁；verify-all 已含 schema-gate。
+- **审计新增动作**：ADMISSION_REVIEW / OBJECT_OFFICIAL / OBJECT_ARCHIVED。
+- **演示/验收**：	ests/integration/test_v12_*.py（治理/事实/经营/连接器/
+  闭环五组）；docs/V1.2_门禁复检与验收标准核对.md（21 项核对）。
+- **已知偏差**：tools official_only 过渡期开关（official_only=false）；
+  CSV 通道仅 CSV（xlsx 先另存）；value ledger 复用 metric 权限轨道。

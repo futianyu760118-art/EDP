@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/event/event.schema.json",
+  "title": "Event 事件语义契约",
+  "description": "AEOS 统一事件契约（V1.1 第六节）。事件命名统一采用 Domain.Object.Action（如 Sales.Order.Confirmed）。",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "tenant_id",
+    "object_ref",
+    "source_system",
+    "occurred_at",
+    "received_at",
+    "schema_version",
+    "payload"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid", "description": "事件唯一标识（服务端派生 UUIDv5，幂等事实来源）" },
+    "event_type": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]{1,127}$",
+      "description": "Domain.Object.Action 点分命名；禁止 event_01 / update_data / status_changed 等无语义名称"
+    },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "object_ref": {
+      "type": ["object", "string"],
+      "description": "事件对象引用（object_type + object_id / 业务键；EDP API 中为 object_id UUID）"
+    },
+    "source_system": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "occurred_at": { "type": "string", "format": "date-time", "description": "业务发生时间" },
+    "received_at": { "type": "string", "format": "date-time", "description": "EDP 接收时间" },
+    "correlation_id": { "type": ["string", "null"], "description": "业务关联标识" },
+    "causation_id": { "type": ["string", "null"], "description": "因果链上游事件引用" },
+    "schema_version": { "type": "string" },
+    "payload": { "type": "object", "description": "事件负载（EDP API 中对应字段为 data）" },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "关联证据引用"
+    },
+    "trace_id": { "type": ["string", "null"], "format": "uuid", "description": "产生本事件的 Trace" }
+  },
+  "additionalProperties": true
+}

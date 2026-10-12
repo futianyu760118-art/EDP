@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/object/business-object.schema.json",
+  "title": "Business Object 企业对象语义契约",
+  "description": "AEOS 统一业务对象契约（V1.1 第五节 + V1.2 第三节）。语义契约，非 API 契约；API 字段名以 contracts/openapi.json 为准（如 API 的 source_id 即本契约 source_object_id）。",
+  "type": "object",
+  "required": [
+    "tenant_id",
+    "object_id",
+    "object_type",
+    "source_system",
+    "source_object_id",
+    "revision",
+    "status",
+    "owner_domain",
+    "occurred_at",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "tenant_id": { "type": "string", "format": "uuid", "description": "租户标识" },
+    "object_id": { "type": "string", "format": "uuid", "description": "对象唯一标识（EDP 内）" },
+    "object_type": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+      "description": "对象类型大写枚举（如 ORDER / CUSTOMER / PRODUCT）"
+    },
+    "source_system": { "type": "string", "minLength": 1, "maxLength": 64, "description": "来源系统" },
+    "source_object_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@#/-]{0,127}$",
+      "description": "源系统对象标识（EDP API 中对应字段为 source_id）"
+    },
+    "revision": { "type": "integer", "minimum": 1, "description": "对象版本（乐观锁）" },
+    "status": { "type": "string", "description": "对象状态" },
+    "owner_domain": { "type": "string", "minLength": 1, "maxLength": 64, "description": "数据所有权域（如 SALES / DELIVERY）" },
+    "occurred_at": { "type": "string", "format": "date-time", "description": "业务发生时间" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "schema_version": { "type": "string", "description": "契约 schema 版本" },
+    "correlation_id": { "type": ["string", "null"], "description": "业务关联标识" },
+    "trace_id": { "type": ["string", "null"], "format": "uuid", "description": "产生本对象的 Trace" },
+    "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "置信度" },
+    "data_quality_status": { "type": ["string", "null"], "description": "数据质量状态" },
+    "layer_status": {
+      "type": "string",
+      "enum": ["RAW", "CLEAN", "STANDARD", "CURATED", "ARCHIVED"],
+      "description": "四层数据模型归属（V1.2 第三节新增）"
+    },
+    "official_version": { "type": ["string", "null"], "description": "CURATED/OFFICIAL 层版本指针；空=尚未成为正式事实" },
+    "lineage_id": { "type": ["string", "null"], "format": "uuid", "description": "数据血缘记录引用（V1.2 第三节新增）" }
+  },
+  "additionalProperties": true
+}

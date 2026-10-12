@@ -104,11 +104,23 @@ async def default_tenant_id(db_session: AsyncSession) -> UUID:
 
 @pytest.fixture
 async def demo(
-    app_role_engine: AsyncEngine, default_tenant_id: UUID
+    app_role_engine: AsyncEngine, default_tenant_id: UUID, db_session: AsyncSession
 ) -> demo_service.SeedStats:
-    """default 租户演示数据集（T7 seed 等价路径）；清场见 _clean_tools_rows。"""
+    """default 租户演示数据集（T7 seed 等价路径）；清场见 _clean_tools_rows。
+
+    V1.2 T21：tools 缺省 official_only=true（仅 CURATED/ARCHIVED）——种子后
+    统一置 CURATED（目标态准入后语义；门禁行为见 test_v12_fact_layer）。
+    """
     stats = await demo_service.seed(app_role_engine, default_tenant_id)
     assert stats.failed == 0
+    await db_session.execute(
+        text(
+            "UPDATE master.business_objects SET layer_status = 'CURATED'"
+            " WHERE tenant_id = :t"
+        ),
+        {"t": default_tenant_id},
+    )
+    await db_session.commit()
     return stats
 
 
@@ -554,7 +566,9 @@ async def test_not_found_and_empty_layers(
     await db_session.commit()
 
     resp = await client.get(
-        f"{BASE}/inventory", params={"material_code": "M-EMPTY"}, headers=DEV_HEADERS
+        f"{BASE}/inventory",
+        params={"material_code": "M-EMPTY", "official_only": "false"},
+        headers=DEV_HEADERS,
     )
     assert resp.status_code == 200, resp.text
     empty_inventory = resp.json()
@@ -568,7 +582,7 @@ async def test_not_found_and_empty_layers(
 
     resp = await client.get(
         f"{BASE}/supplier-lead-times",
-        params={"supplier_code": "S-EMPTY"},
+        params={"supplier_code": "S-EMPTY", "official_only": "false"},
         headers=DEV_HEADERS,
     )
     assert resp.status_code == 200, resp.text

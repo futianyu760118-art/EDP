@@ -47,12 +47,15 @@ FORCE RLS——调用方会话需已 bind_tenant（CLI/API 各自绑定；显式
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from time import perf_counter
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from edp_adapters.base import SourceAdapter, SourceRecord
@@ -61,16 +64,23 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from edp_api.core.contextvars import current_principal
 from edp_api.core.db import bind_tenant
+from edp_api.core.errors import EdpError
 from edp_api.core.security.principal import Principal
 from edp_api.modules.audit import service as audit_service
 from edp_api.modules.events import service as events_service
 from edp_api.modules.events.uuidv5 import derive_event_id, normalize_occurred_at
 from edp_api.modules.evidence import service as evidence_service
 from edp_api.modules.evidence.schemas import EvidenceCreateRequest
+from edp_api.modules.governance import service as governance_service
 from edp_api.modules.ingest.models import System
+from edp_api.modules.ingest.schemas import ImportErrorItem, ImportStats
 from edp_api.modules.projections import service as projections_service
 from edp_api.modules.registry import service as registry_service
-from edp_api.modules.registry.schemas import ObjectUpsertRequest
+from edp_api.modules.registry.schemas import (
+    OBJECT_TYPE_PATTERN,
+    SOURCE_ID_PATTERN,
+    ObjectUpsertRequest,
+)
 from edp_api.modules.tenantmgmt import service as tenantmgmt_service
 
 logger = logging.getLogger(__name__)
@@ -144,6 +154,23 @@ _OBJECT_COUNT_SQL = text("""
     GROUP BY object_type
 """)
 
+# RAW 留存（V1.2 T08）：先留存后处理——源记录原始 payload 落 governance.
+# raw_records（checksum 复用 evidence_service.compute_checksum 单一实现）；
+# ON CONFLICT DO NOTHING 幂等（同 (source_system, source_record_id,
+# source_timestamp) 重放不重复落数）；审计不单列 RAW 行（派生归档行，业务
+# 写已由 OBJECT_*/EVENT_CREATE/EVIDENCE_CREATE 逐行有审计，同 outbox/投影
+# 排除惯例）。
+_INSERT_RAW_SQL = text("""
+    INSERT INTO governance.raw_records
+        (raw_record_id, tenant_id, source_system, source_record_id, object_type,
+         source_timestamp, raw_payload, batch_id, checksum, schema_version)
+    VALUES
+        (:raw_record_id, :tenant_id, :source_system, :source_record_id, :object_type,
+         :source_timestamp, CAST(:payload AS jsonb), :batch_id, :checksum, :schema_version)
+    ON CONFLICT (tenant_id, source_system, source_record_id, source_timestamp)
+    DO NOTHING
+""")
+
 # event_type 尾缀反解 object_type（ORDER_SNAPSHOT → ORDER）
 _EVENT_COUNT_SQL = text(r"""
     SELECT substr(event_type, 1, length(event_type) - :suffix_len) AS object_type,
@@ -195,19 +222,72 @@ async def process_record(
         )
         return False
 
+    occurred_at = normalize_occurred_at(record.occurred_at)
+
+    # RAW 留存（V1.2 T08）：幂等命中（rowcount=0，RAW 已有同版本）不阻断
+    # 既有流程；checksum 复用 evidence 单一实现——evidence 快照与 RAW 的
+    # checksum 同源（canonical_json 键排序+紧凑），可互为校验
+    await sess.execute(
+        _INSERT_RAW_SQL,
+        {
+            "raw_record_id": uuid4(),
+            "tenant_id": tenant_id,
+            "source_system": record.source_system,
+            "source_record_id": record.source_id,
+            "object_type": record.object_type,
+            "source_timestamp": occurred_at,
+            "payload": json.dumps(record.payload, ensure_ascii=False),
+            "batch_id": None,
+            "checksum": evidence_service.compute_checksum(record.payload),
+            "schema_version": None,
+        },
+    )
+    # 取实际 RAW 行（幂等冲突时行已存在，用既有行 id——clean_records 外键）
+    raw_record_id = (
+        await sess.execute(
+            text(
+                "SELECT raw_record_id FROM governance.raw_records"
+                " WHERE tenant_id = :tid AND source_system = :src"
+                " AND source_record_id = :rid AND source_timestamp = :ts"
+            ),
+            {
+                "tid": tenant_id,
+                "src": record.source_system,
+                "rid": record.source_id,
+                "ts": occurred_at,
+            },
+        )
+    ).scalar_one_or_none()
+
+    # 清洗（V1.2 T09）：初始无规则 = 恒等变换（既有测试零影响）；清洗结果
+    # 用于对象 upsert 与领域投影，evidence 快照仍存原始 payload（证据=源快照，
+    # 清洗不得覆盖 RAW/证据口径）
+    cleaning_result = await governance_service.cleaning.apply_cleaning(
+        sess, tenant_id, record.object_type, record.payload
+    )
+    cleaned_record = replace(record, payload=cleaning_result.cleaned)
+
     # 对象 upsert（新建 revision=1；更新 revision+1）——owner_domain 提升为
-    # 独立列，attributes 存其余字段
-    attributes = {k: v for k, v in record.payload.items() if k != "owner_domain"}
+    # 独立列，attributes 存其余字段（清洗后）
+    attributes = {
+        k: v for k, v in cleaned_record.payload.items() if k != "owner_domain"
+    }
     obj, _created = await registry_service.upsert_object(
         sess,
         principal,
         ObjectUpsertRequest(
             object_type=record.object_type,
-            owner_domain=record.payload["owner_domain"],
+            owner_domain=cleaned_record.payload.get("owner_domain")
+            or record.payload["owner_domain"],
             source_system=record.source_system,
             source_id=record.source_id,
             attributes=attributes,
         ),
+    )
+
+    # 清洗留痕（V1.2 T09）：对象 upsert 后落 clean_records（每 fix 一行）
+    await governance_service.record_cleaning(
+        sess, tenant_id, obj.object_id, raw_record_id, cleaning_result
     )
 
     # 领域投影（spec §2.1：对象 upsert 后、事件写入前，同事务）——savepoint
@@ -216,7 +296,7 @@ async def process_record(
     try:
         async with sess.begin_nested():
             await projections_service.project_record(
-                sess, tenant_id, record, obj.object_id
+                sess, tenant_id, cleaned_record, obj.object_id
             )
     except Exception:
         logger.warning(
@@ -299,6 +379,10 @@ async def process_record(
         actor=SERVICE_ACTOR_ID,
     )
     await tenantmgmt_service.bump_usage_daily(sess, tenant_id, events_in=1)
+
+    # 准入推进（V1.2 T07/T08）：同步管线至 CLASSIFIED（RECEIVED→PROFILED→
+    # CLEANED→STANDARDIZED→CLASSIFIED，逐边事件留痕）；A2 起由人工审核驱动
+    await governance_service.ensure_admission_pipeline(sess, tenant_id, obj.object_id)
     return True
 
 
@@ -547,3 +631,127 @@ async def _count_by_type(
     return {
         row["object_type"]: row["n"] for row in (await sess.execute(sql, params)).mappings()
     }
+
+
+# ---- 文件导入（V1.2 T30：Excel/CSV 通道） ----
+
+IMPORT_SOURCE_SYSTEM = "file-import"
+MAX_FILE_BYTES = 5 * 1024 * 1024
+MAX_IMPORT_ROWS = 1000
+REQUIRED_COLUMNS = ("object_type", "source_id", "occurred_at")
+
+# 对象类型 → owner_domain 缺省映射（CSV 可经可选列 owner_domain 覆盖）
+_DEFAULT_OWNER_DOMAINS = {
+    "CUSTOMER": "master",
+    "MATERIAL": "master",
+    "PRODUCT": "master",
+    "SUPPLIER": "procurement",
+    "ORDER": "sales",
+    "PURCHASE_ORDER": "procurement",
+    "SUPPLIER_LEAD_TIME": "procurement",
+    "INVENTORY": "delivery",
+    "CAPACITY": "delivery",
+    "BOM": "rd",
+    "PROJECT": "rd",
+}
+
+
+def _coerce_value(raw: str) -> Any:
+    """CSV 标量类型推断：int → float → bool → 原串（投影 NUMERIC 列需要数值）。"""
+    text_value = raw.strip()
+    if not text_value:
+        return None
+    try:
+        return int(text_value)
+    except ValueError:
+        pass
+    try:
+        return float(text_value)
+    except ValueError:
+        pass
+    lowered = text_value.lower()
+    if lowered in ("true", "false"):
+        return lowered == "true"
+    return raw
+
+
+async def import_csv(
+    sess: AsyncSession, principal: Principal, content: str
+) -> ImportStats:
+    """CSV 解析 → 逐行 SourceRecord → process_record 管道（同事务）。
+
+    模板校验（缺必需列 → 400）；逐行校验（object_type/source_id 模式、
+    occurred_at 解析）失败记 errors 行不阻断整批；行数上限 MAX_IMPORT_ROWS。
+    """
+    reader = csv.DictReader(io.StringIO(content))
+    if reader.fieldnames is None:
+        raise EdpError.validation_error("CSV 无表头行")
+    missing = [col for col in REQUIRED_COLUMNS if col not in reader.fieldnames]
+    if missing:
+        raise EdpError.validation_error(f"缺少必需列：{', '.join(missing)}")
+    if len(content.splitlines()) - 1 > MAX_IMPORT_ROWS:
+        raise EdpError.validation_error(f"行数超限（上限 {MAX_IMPORT_ROWS}）")
+
+    stats = ImportStats()
+    for row_number, row in enumerate(reader, start=2):
+        object_type = (row.get("object_type") or "").strip().upper()
+        source_id = (row.get("source_id") or "").strip()
+        occurred_raw = (row.get("occurred_at") or "").strip()
+        if not re.fullmatch(OBJECT_TYPE_PATTERN, object_type):
+            stats.failed += 1
+            stats.errors.append(
+                ImportErrorItem(
+                    row=row_number, message=f"object_type 非法：{object_type}"
+                )
+            )
+            continue
+        if not re.fullmatch(SOURCE_ID_PATTERN, source_id):
+            stats.failed += 1
+            stats.errors.append(
+                ImportErrorItem(row=row_number, message=f"source_id 非法：{source_id}")
+            )
+            continue
+        try:
+            occurred_at = datetime.fromisoformat(occurred_raw)
+            if occurred_at.tzinfo is None:
+                occurred_at = occurred_at.replace(tzinfo=UTC)
+        except ValueError:
+            stats.failed += 1
+            stats.errors.append(
+                ImportErrorItem(
+                    row=row_number, message=f"occurred_at 非法：{occurred_raw}"
+                )
+            )
+            continue
+
+        payload = {
+            key: coerced
+            for key, value in row.items()
+            if key not in (*REQUIRED_COLUMNS, "owner_domain")
+            and (coerced := _coerce_value(value or "")) is not None
+        }
+        payload["owner_domain"] = (
+            (row.get("owner_domain") or "").strip()
+            or _DEFAULT_OWNER_DOMAINS.get(object_type, "master")
+        )
+        record = SourceRecord(
+            source_system=IMPORT_SOURCE_SYSTEM,
+            object_type=object_type,
+            source_id=source_id,
+            occurred_at=occurred_at,
+            payload=payload,
+        )
+        try:
+            registered = await process_record(sess, principal.tenant_id, record)
+        except Exception:
+            stats.failed += 1
+            stats.errors.append(ImportErrorItem(row=row_number, message="管道处理失败"))
+            logger.warning("文件导入单行失败：%s/%s", object_type, source_id, exc_info=True)
+            continue
+        if registered:
+            stats.registered += 1
+        else:
+            stats.duplicated += 1
+
+    stats.received = stats.registered + stats.duplicated + stats.failed
+    return stats

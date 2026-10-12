@@ -136,7 +136,7 @@ async def test_me_admin_roles_and_wildcard_permissions(
     #  + 0012 audit:policy_read/audit:policy_write
     #  + 0013 quality:read/quality:run）
     assert set(body["permissions"]) == ALL_PERMISSIONS
-    assert len(body["permissions"]) == 23
+    assert len(body["permissions"]) == 30
 
 
 async def test_me_manager_roles_and_permissions(client: httpx.AsyncClient) -> None:

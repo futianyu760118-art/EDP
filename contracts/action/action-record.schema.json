@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/action/action-record.schema.json",
+  "title": "Action Record 行动记录语义契约",
+  "description": "AEOS 行动契约（V1.1 第十节；对账导出自 EDP action 模块 B.5 现状）。9 态状态机；无 Owner/Deadline/Verification 的行动不得成为正式任务（第一链路上收口）。",
+  "type": "object",
+  "required": ["action_id", "title", "action_type", "status", "created_at", "updated_at"],
+  "properties": {
+    "action_id": { "type": "string", "format": "uuid" },
+    "case_id": { "type": ["string", "null"], "format": "uuid", "description": "归属决策案例" },
+    "title": { "type": "string" },
+    "action_type": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["PROPOSED", "ASSIGNED", "ACCEPTED", "APPROVED", "EXECUTING", "COMPLETED", "VERIFIED", "CANCELLED", "REJECTED"]
+    },
+    "owner": { "type": ["string", "null"], "description": "Owner（正式任务必填）" },
+    "owner_role": { "type": ["string", "null"] },
+    "due_date": { "type": ["string", "null"], "format": "date-time", "description": "Deadline（正式任务必填）" },
+    "description": { "type": ["string", "null"] },
+    "completion_time": { "type": ["string", "null"], "format": "date-time" },
+    "verified_at": { "type": ["string", "null"], "format": "date-time", "description": "Verification 完成时间" },
+    "verified_by": { "type": ["string", "null"] },
+    "result_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "执行产生的经营结果（V1.2 T18 新增列 result_refs）"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "行动证据引用（evidence links ref_type=ACTION）"
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

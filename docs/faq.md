@@ -35,3 +35,22 @@ W6 压测结论：P95 全达标、峰值 46.9rps 无热点租户形态 → 维�
 
 **Q12 契约变更流程？**
 后端导出 → contracts/ 快照 + sha256 → api-sdk regen → `make contract-gate`；冻结后变更须 PR 评审（EDP-007）。
+
+---
+
+## V1.2 治理与事实层（2026-10 迭代）
+
+- 数据准入状态机在哪？governance.admission_records（15 态 A1–A4）；审核经
+  /governance/admission/{id}/source-review|management-review|archive
+  （Human-Only，admission:review 权限）；worker 每 60s 自动机器预审
+  （CLASSIFIED→SOURCE_REVIEW）。
+- 数据四层在哪看？RAW=governance.raw_records（先留存后处理）；OFFICIAL
+  标记在 master.business_objects.layer_status（CURATED/ARCHIVED）+ 血缘
+  governance.lineage。
+- 为什么 tools 读不到数据？official_only 缺省 true——对象须完成准入审核
+  （OFFICIAL/ARCHIVED）；调试可传 official_only=false（过渡期开关）。
+- 指标口径在哪定义？/metrics（Metric Registry，版本化生效区间）；EBMS
+  报表经 registry（前端零公式）。AEOS 经营窗口（上月16~当月15）经
+  /periods/aeos。
+- CSV 导入？POST /admin/ingest/file（body=CSV 文本；列 object_type/
+  source_id/occurred_at + payload 列，adapters:write）。
