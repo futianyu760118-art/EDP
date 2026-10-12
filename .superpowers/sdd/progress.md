@@ -282,3 +282,163 @@ Branch: feat/w6���� master be84ff4 �г���
 **W6 ��������2026-09-22��fix/w6-followups��**��D-13 ���񻥳� 409 ��������Լ��error_responses �������ǲ��� + ���˵�������ָ�� d1929b21��**2b9ed988**��SDK regen+gate �̣���D-14 Topbar ���� URL q��+2 ���ԣ���D-15 capability ���������źţ�isFallback+�������嵥�����á���ʾ��+ MSW drills fixtures �������ļ���pitr/tenant_restore SUCCEEDED ʵ��ֵ����������ҳ���Զ��������ݡ�����ȫ�����ݡ��������ļ��ޡ���С��������pitr ���иĶ������������Ž������ 695 / ǰ�� 257��+4��/ ruff/lint-imports/contract-gate ȫ�̡�ʣ�ࣺA-1��push ���� e2e.yml����D-16��outbox FILTER СӲ������D-17��health Seq Scan ��ģ��������D-18~20/E������/���ڣ���
 
 **W6 ��ȫ�޳���2026-09-23��master��**��staging ��ʵ��Կ��MinIO root ����/JWT secret���Ӳֿ���**ȫ����ʷ**�޳������������� deploy/.env ע�루compose ��Ĭ��ֵ + PGBACKREST_REPO1_S3_KEY_SECRET ��������ע�� pgbackrest�������ļ�ȥ��Կ��+ ģ�� deploy/.env.example��git filter-repo --replace-text ��дȫ�� 8 ��֧��ʷ���� HEAD 0cec8ea��+ ǿ�� Gitee����֤������/Զ����ʷ 0 ������8 ��֧Զ��=���ء�staging ȫ��·ʵ��ͨ������¼/���/pgbackrest info ok����**���죺�ѹ�����Կ�����ֻ�**������ deploy/.env �� up -d �ؽ� patroni/pgbackrest/minio����
+
+---
+
+# SDD Progress Ledger — EDP V1.2 迭代 Phase 1（契约与治理模型冻结）
+
+方案: docs/AEOS_企业数据与证据中台_EDP_迭代版总体方案_V1.2.md
+行动计划: docs/AEOS_企业数据与证据中台_EDP_迭代行动计划_V1.2.md
+Branch: master（Phase 1 文档/契约类交付，未切分支；代码改动仅 CI/脚本）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T01 | DONE | docs/V1.2_边界与数据所有权冻结条款.md | 边界 9 条 + Owner 基线 + Goal/KPI 边界 4 条 + management.* 四表处置；待 M01/EBMS 书面签署 |
+| T02 | DONE | contracts/{object,event,result,evidence,governance}/共 8 份 schema | 语义契约（Draft 2020-12）；result 为新增契约；与 API 契约关系写入 contracts/README.md |
+| T03 | DONE | docs/V1.2_数据源清单.md | mock 基线 4 适配器（erp_mock BASE60+DELTA8 / demo 43 条）；真实 ERP/MES 字段清单获取计划；CRM 后移 |
+| T04 | DONE | docs/V1.2_四层模型映射表.md | 51 张表逐 schema 映射（49 基线 + audit.policies + ops.tasks）；新增 6 类治理表；ingest RAW 改造清单 |
+| T05 | DONE | docs/V1.2_A1-A4准入状态机设计.md | 15 态 + 转移表（见契约 definitions.transitions）；admission_records 迁移草案；审核记录模型；执行者说明 |
+| T06 | DONE | docs/V1.2_清洗规则与分类维度设计.md | 首批 10 规则（首链路对象）；标准化字典；实体解析；四维度最小树 + 10 tag |
+| T07 | DONE | backend/scripts/validate_contract_schemas.py + backend.yml schema-gate job + Makefile schema-gate/verify-all | uv run --with jsonschema；8/8 通过；ruff 绿 |
+
+出口条件核对（G0/G1）：
+- G0 边界冻结：文档已出，M01/EBMS 书面确认待签（外部依赖，不阻塞后续任务）
+- G1 契约冻结：8 份 schema 入库 + CI schema-gate 生效（make schema-gate 8/8）
+
+备注：Phase 2（T08~T16）起涉及迁移与模块开发，按仓库 SDD 惯例切 feat/v12-governance 分支 + 周级计划文件执行。
+
+---
+
+# SDD Progress Ledger — EDP V1.2 Phase 2（治理最小闭环）
+
+Spec: docs/superpowers/specs/2026-10-10-edp-v12-governance-design.md
+Plan: docs/superpowers/plans/2026-10-10-edp-v12-governance.md
+Branch: feat/v12-governance（自 master 49049ab 切出；未 push）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T1(0014迁移) | DONE | 0014_v12_governance_baseline.py | governance schema 10 表 + RLS + 3 权限码；一次性容器 upgrade→downgrade→upgrade exit 0 |
+| T2(RAW留存) | DONE | ingest/service.py _INSERT_RAW_SQL | process_record 先留存后处理；checksum 复用 evidence 单一实现；幂等冲突取既有行 id |
+| T3(清洗引擎) | DONE | modules/governance/{models,cleaning,service,schemas,router,dependencies}.py + main.py 挂载 | 10 rule_type；fixAudit clean_records；无规则恒等（既有测试零影响） |
+| T4(规则API) | DONE | POST/GET /governance/cleaning-rules | 版本化生效区间（新版本收旧 effective_to）；游标分页 |
+| T5(实体解析) | DONE | entity-aliases API + ENTITY_RESOLUTION | 别名归一 canonical 名称替换（引擎级实测） |
+| T6(分类/标签) | DONE | dimensions/taxonomies/tags/object-classifications | AI_ASSISTED 仅建议（approved_* 置空） |
+| T7(状态机) | DONE | admission 15 态 TRANSITIONS + 管道推进至 CLASSIFIED | 同步段不发事件（审计切面留痕）——spec §3 已修订裁定 |
+| T8(A2审核) | DONE | source-review（机器预审 + Human-Only 六结果） | FAIL 门禁 + DataQuality.Exception 独立会话事件 |
+| T9(A3审核) | DONE | management-review → OFFICIAL | 机器复审（一致性/Evidence/历史合理性） |
+| T10(A4归档) | DONE | archive → ARCHIVED + 归档要素回填 | raw_version/checksum/classifications 快照 |
+| T11(收口) | DONE | 契约导出 0f190853 + SDK regen + 全量回归 | backend **702 passed**（695 基线 + 7 新测试）；api-sdk 22 绿；指纹门禁绿；schema-gate 8/8 |
+
+关键裁定（记入偏差）：
+1. 同步管线段状态事件取消（防污染 SNAPSHOT 计数基线）——spec §3 修订；
+2. DataQuality.Exception 走独立会话（拒绝路径随请求回滚，同 GUARD_DENIED 解耦先例）；
+3. demo purge 增加 governance 段（先子后父）；test_pipeline/adapters_api/cli 三处 bespoke 清场同步补 governance 删除块；
+4. rbac.py 矩阵 + test_security ALL_CODES（23→26）+ test_auth 权限数（23→26）同步；
+5. admission_records UNIQUE(tenant_id, object_id)（T05 注 1 裁定：一对象一条，重审 version+1）。
+
+出口条件核对（Phase 2）：mock 订单数据集 100% RECEIVED→ARCHIVED（test_admission_full_chain_to_archived 实测）；血缘要素（raw/clean/rule/审核）可查询；既有测试全绿（702）。
+遗留（Phase 3）：business_object official_version/lineage_id 列（T19）、lineage 模块（T20）、ebms/tools official_only（T21）、decision/action/trace result_refs（T18）。
+
+---
+
+# SDD Progress Ledger — EDP V1.2 Phase 3（事实与结果层）
+
+Spec: docs/superpowers/specs/2026-10-10-edp-v12-fact-layer-design.md
+Plan: docs/superpowers/plans/2026-10-10-edp-v12-fact-layer.md
+Branch: feat/v12-governance（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T1(0015迁移) | DONE | 0015_v12_fact_layer.py | result schema + result_refs 三列 + business_objects 三列 + governance.lineage + 2 权限码；容器全周期 exit 0 |
+| T2(T17 result) | DONE | modules/result 六件套 | evidence_refs 必填非空（400）；RESULT links 幂等；列表/详情 |
+| T3(T17 verify) | DONE | POST /results/{id}/verify | Human-Only（GUARD_DENIED 独立会话）；证据链重校验 |
+| T4(T20 lineage) | DONE | modules/lineage 五件套 | 写入口=OFFICIAL 转换；读 API 走 governance:read |
+| T5(T19 回写) | DONE | governance._mark_official + archive 回写 | layer_status CURATED/ARCHIVED + official_version + lineage_id + OBJECT_OFFICIAL/ARCHIVED 审计 |
+| T6(T21 tools) | DONE | tools 7 端点 official_only（默认 true，CURATED/ARCHIVED） | 既有测试适配：m3 显式 false / tools+m4 demo fixture 置 CURATED（过渡期偏差） |
+| T7(T22 契约) | DONE | contracts/decision|action|trace 三份 schema | 对账导出自现状，未反向改代码 |
+| T8(收口) | DONE | 契约 5b18b3c6 + SDK regen + 全量回归 | backend **706 passed**（702 基线 + 4 新测试）；api-sdk 22 绿；指纹门禁绿；schema-gate **11/11** |
+
+关键裁定（记入偏差）：
+1. layer_status 枚举用 CURATED（契约口径）——方案文字 OFFICIAL 语义=CURATED；
+2. 审计切面容器序列化修正（UUID 容器往返转字符串）——result.evidence_refs 非空 UUID[] 实测暴露，既有路径无回归（706 全绿）；
+3. tools 门禁语义：非 OFFICIAL 详情 404 / 列表过滤；official_only=false 为过渡期开关（Phase 6 UAT 收口）；
+4. rbac 26→28、test_security MANAGER +result:write、test_auth 28；
+5. demo purge 增加 result.results + governance.lineage 段。
+
+出口条件核对（Phase 3）：Result→Evidence 100%（创建硬约束 + 测试）；Decision→Action→Result→Evidence 全链（result_refs 三列 + links）；Agent 读不到非 OFFICIAL（tools 门禁实测）；契约冻结入 CI（schema-gate 11/11）。
+遗留（Phase 4）：Metric Registry/Period/Value Ledger/EBMS 指标改造（T23~T27）。
+
+---
+
+# SDD Progress Ledger — EDP V1.2 Phase 4（经营结果层）
+
+Spec: docs/superpowers/specs/2026-10-10-edp-v12-metric-value-design.md
+Plan: docs/superpowers/plans/2026-10-10-edp-v12-metric-value.md
+Branch: feat/v12-governance（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T1(0016迁移) | DONE | 0016_v12_metric_value.py | metric 2 表 + value 1 表 + RLS + 2 权限码；容器全周期 exit 0 |
+| T2(T24 period) | DONE | modules/period 四件套 + tests/unit/test_period.py | AEOS 窗口（16/15 日边界含跨年）+ ISO 周 + 滚动窗；纯函数 |
+| T3(T23 metric) | DONE | modules/metric 六件套 | 版本化生效区间（uq_metrics_active_code 部分唯一索引——UNIQUE(code) 与版本化冲突的修正）；计量值 upsert |
+| T4(T25 value) | DONE | modules/value 五件套 | delta 派生；Human-Only 核验；复用 metric 权限轨道 |
+| T5(T26 EBMS) | DONE | demo seed 双写 metric + ebms _latest_kpis 切 registry | kpi 值与既有断言一致（91.2/7.2/85.0）；management.* 保留兼容 |
+| T6(T27 契约) | DONE | contracts/metric + value 两份 schema | schema-gate 11→13 |
+| T7(收口) | DONE | 契约 a364db90 + SDK regen + 全量回归 | backend **718 passed**（706 基线 + 8 单元 + 4 集成）；api-sdk 22 绿；指纹门禁绿 |
+
+关键裁定（记入偏差）：
+1. metrics 表 UNIQUE(tenant,code) 与口径版本化冲突 → 改部分唯一索引
+   uq_metrics_active_code（生效中唯一，历史版本共存）；
+2. value ledger 复用 metric 轨道（读 metric:read、写 metric:manage），
+   独立 value 权限码 W 后评估；
+3. value ledger evidence_refs 为引用数组（不扩 links RefType 枚举，记偏差）；
+4. rbac 28→30（metric:read 四角色 / metric:manage PLATFORM_ADMIN/ADMIN）、
+   test_auth/test_security 计数同步。
+
+出口条件核对（Phase 4）：EBMS 指标 100% 引用 Registry（_latest_kpis 实测）；AEOS 周期聚合正确（8 单测）；契约冻结入 CI（schema-gate 13/13）。
+遗留（Phase 5）：真实 ERP/MES 连接器（T28/T29）、Excel/CSV 通道（T30）、真实数据准入（T31）、worker 调度（T32）、search_objects（T33）、tools OFFICIAL 回归（T34）。
+
+---
+
+# SDD Progress Ledger — EDP V1.2 Phase 5（连接器与多维查询，无外部依赖部分）
+
+Spec: docs/superpowers/specs/2026-10-10-edp-v12-connector-search-design.md
+Branch: feat/v12-governance（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T30(CSV通道) | DONE | ingest/router + schemas + import_csv | 请求体=CSV 文本（免 python-multipart 依赖；xlsx 不解析记偏差）；owner_domain 缺省映射；数值类型推断；重导幂等（RAW 唯一键） |
+| T32(worker调度) | DONE | worker/admission_job.py + main 并发常驻 | auto_source_machine_review（PASS/WARNING 推进 SOURCE_REVIEW、FAIL 留态+DQ）；API source_review 兼容 SOURCE_REVIEW 起态（自环守卫） |
+| T33(search) | DONE | 0017 object_tags + 挂接 API + tools/search-objects | 四维过滤（object_type/classification/dimension/tag）+ official_only；CAST(:p AS text) 防 asyncpg 参数类型歧义；expanding 参数显式声明 |
+| T34(tools回归) | DONE | 全量回归 | tools 全端点 + search-objects 门禁测试 |
+
+T28/T29（真实 ERP/MES 连接器）与 T31（真实数据准入）仍依赖 T03 外部对接资源（字段清单/接口文档/只读账号），未实施——CSV 通道先行验证准入管线。
+
+验证：backend 全量 **722 passed**（1 deselected：test_health::test_ops_metrics_w6_five_fields_seeded 为既有跨午夜时间窗 flake——master 基线同失败，worktree 复现排除回归）；契约 c24527e6 + SDK regen + 指纹门禁绿；schema-gate 13/13。
+
+关键裁定（记入偏差）：
+1. 文件导入以 raw body 而非 multipart（避免新增 python-multipart 依赖）；
+2. worker admission 循环与 outbox 并发常驻（asyncio.gather）；
+3. auto 预审在 API 测试环境不运行（worker 进程），服务函数直接经集成测试验证。
+
+---
+
+# SDD Progress Ledger — EDP V1.2 Phase 6（闭环 UAT 与验收）
+
+Spec: 方案 V1.2 第二十二节（第一条正式业务闭环）
+Branch: feat/v12-governance（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T35 | DONE | tests/integration/test_v12_closed_loop.py（主链） | 销售→订单→交付→应收全链：准入 OFFICIAL→Result(verify)→Decision→Action(VERIFIED)→Shipment/AR→归档；Result→Evidence 100% 实测 |
+| T36 | DONE | 同文件（六类异常） | 缺料/产能/交期（demo 场景）+ 品质/出货延期/应收逾期（events/batch 构造）→ exceptions 可见；缺料类复用 seed 主线案例完成闭环 |
+| T37 | DONE | docs/V1.2_门禁复检与验收标准核对.md | G0–G4 复检全绿（G5 冻结） |
+| T38 | DONE | 同文档（21 项核对表） | 20 项通过 + 1 项主链通过/全量待真实数据（#9）；证据逐项标注 |
+| T39 | DONE | 同文档（Owner Verify 表） | 系统核验落库（verified_by/ADMISSION_REVIEW）；线下签字待 Owner |
+| T40 | DONE | docs/faq.md + docs/ops-runbook.md 增补 | V1.2 运维面（schema/worker/权限码/门禁/偏差） |
+
+验证：backend 全量 **724 passed**（1 deselected 既有跨午夜 flake）；契约快照不变（c24527e6）；schema-gate 13/13；无 openapi 变更。
+
+V1.2 迭代收官状态：40 任务完成 35；T28/T29（真实 ERP/MES 连接器）与 T31
+（真实数据抽样）依赖外部对接资源；T35~T40 以 mock+CSV 先行完成，真实数据
+UAT 待连接器就绪后复跑。
