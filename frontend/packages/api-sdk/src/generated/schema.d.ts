@@ -250,6 +250,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ingest/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** CSV 批量导入（请求体 = CSV 文本；模板列 object_type/source_id/occurred_at） */
+        post: operations["import_file_api_v1_admin_ingest_file_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/outbox/status": {
         parameters: {
             query?: never;
@@ -808,6 +825,267 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/governance/admission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 准入记录列表（state 过滤 + 游标分页） */
+        get: operations["list_admissions_api_v1_governance_admission_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/admission/{admission_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 准入记录详情 */
+        get: operations["get_admission_api_v1_governance_admission__admission_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/admission/{admission_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A4 正式归档（OFFICIAL → ARCHIVED） */
+        post: operations["archive_api_v1_governance_admission__admission_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/admission/{admission_id}/management-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A3 管理系统人机复审（Human-Only；机器 FAIL 阻断；通过转 OFFICIAL） */
+        post: operations["management_review_api_v1_governance_admission__admission_id__management_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/admission/{admission_id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 准入审核记录列表（A2/A3 留痕） */
+        get: operations["list_reviews_api_v1_governance_admission__admission_id__reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/admission/{admission_id}/source-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A2 本系统人机共审（Human-Only；机器 FAIL 阻断） */
+        post: operations["source_review_api_v1_governance_admission__admission_id__source_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/classifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 对象分类列表（object_id 过滤，仅生效中版本） */
+        get: operations["list_classifications_api_v1_governance_classifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/cleaning-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 清洗规则列表（object_type 过滤 + 游标分页） */
+        get: operations["list_cleaning_rules_api_v1_governance_cleaning_rules_get"];
+        put?: never;
+        /** 注册清洗规则（新版本自动覆盖旧生效区间） */
+        post: operations["create_cleaning_rule_api_v1_governance_cleaning_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/dimensions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 维度列表 */
+        get: operations["list_dimensions_api_v1_governance_dimensions_get"];
+        put?: never;
+        /** 创建维度 */
+        post: operations["create_dimension_api_v1_governance_dimensions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/entity-aliases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 实体别名列表（object_type 过滤 + 游标分页） */
+        get: operations["list_entity_aliases_api_v1_governance_entity_aliases_get"];
+        put?: never;
+        /** 注册实体别名（alias → canonical 归一） */
+        post: operations["create_entity_alias_api_v1_governance_entity_aliases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/object-classifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 挂接对象分类（AI_ASSISTED 仅建议） */
+        post: operations["create_classification_api_v1_governance_object_classifications_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/object-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 对象标签挂接列表（object_id 过滤） */
+        get: operations["list_object_tags_api_v1_governance_object_tags_get"];
+        put?: never;
+        /** 挂接对象标签（幂等：已挂返回既有行） */
+        post: operations["attach_object_tag_api_v1_governance_object_tags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/raw-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** RAW 记录只读列表（object_type 过滤 + 游标分页） */
+        get: operations["list_raw_records_api_v1_governance_raw_records_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 标签列表 */
+        get: operations["list_tags_api_v1_governance_tags_get"];
+        put?: never;
+        /** 创建标签 */
+        post: operations["create_tag_api_v1_governance_tags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/governance/taxonomies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 分类树节点列表（dimension_id 过滤） */
+        get: operations["list_taxonomies_api_v1_governance_taxonomies_get"];
+        put?: never;
+        /** 创建分类树节点 */
+        post: operations["create_taxonomy_api_v1_governance_taxonomies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -820,6 +1098,40 @@ export interface paths {
          * @description 基础健康 + ops_metrics；deep=true 返回 db_ha（需 audit:read）。
          */
         get: operations["get_health_api_v1_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 按源记录查询血缘链（新→旧） */
+        get: operations["list_lineage_api_v1_lineage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lineage/{lineage_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 血缘详情（附对象引用） */
+        get: operations["get_lineage_api_v1_lineage__lineage_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -870,6 +1182,42 @@ export interface paths {
          * @description Human-Only 评审 → 200；已评审 → 409；不存在/跨租户统一 404。
          */
         patch: operations["review_memory_api_v1_memories__memory_id__review_patch"];
+        trace?: never;
+    };
+    "/api/v1/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 指标口径列表（code 过滤 + 游标分页） */
+        get: operations["list_metrics_api_v1_metrics_get"];
+        put?: never;
+        /** 注册指标口径（同 code 新版本收旧生效区间） */
+        post: operations["create_metric_api_v1_metrics_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/{metric_id}/values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 计量值列表（period 降序） */
+        get: operations["list_values_api_v1_metrics__metric_id__values_get"];
+        put?: never;
+        /** 记录计量值（同 period 覆盖 upsert） */
+        post: operations["record_value_api_v1_metrics__metric_id__values_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/objects": {
@@ -930,6 +1278,92 @@ export interface paths {
         get: operations["object_history_api_v1_objects__object_id__history_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/periods/aeos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** AEOS 经营窗口（缺省当前日期；date 可指定） */
+        get: operations["get_aeos_window_api_v1_periods_aeos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/periods/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 周期类型枚举（含边界说明） */
+        get: operations["list_period_kinds_api_v1_periods_kinds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 经营结果列表（result_type/status 过滤 + 游标分页） */
+        get: operations["list_results_api_v1_results_get"];
+        put?: never;
+        /** 创建经营结果（evidence_refs 必填非空） */
+        post: operations["create_result_api_v1_results_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/results/{result_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 经营结果详情 */
+        get: operations["get_result_api_v1_results__result_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/results/{result_id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 核验经营结果（Human-Only；证据链重校验） */
+        post: operations["verify_result_api_v1_results__result_id__verify_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1315,7 +1749,7 @@ export interface paths {
         };
         /**
          * 客户主数据（name/level/attributes）
-         * @description 客户主数据；不存在/跨租户统一 404 NOT_FOUND。
+         * @description 客户主数据；不存在/跨租户/非 OFFICIAL 统一 404 NOT_FOUND。
          */
         get: operations["get_customer_api_v1_tools_customers__customer_code__get"];
         put?: never;
@@ -1375,7 +1809,7 @@ export interface paths {
         };
         /**
          * 订单详情（含行明细与客户）
-         * @description 订单详情；不存在/跨租户统一 404 NOT_FOUND（不泄露存在性）。
+         * @description 订单详情；不存在/跨租户/非 OFFICIAL 统一 404 NOT_FOUND（不泄露存在性）。
          */
         get: operations["get_order_api_v1_tools_orders__order_no__get"];
         put?: never;
@@ -1398,6 +1832,26 @@ export interface paths {
          * @description 采购单列表（B.8：items + next_cursor；游标分页字段本轮占位）。
          */
         get: operations["list_purchase_orders_api_v1_tools_purchase_orders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tools/search-objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 多维对象查询（分类/维度/标签/official_only，V1.2 T33）
+         * @description 多维查询（V1.1 第四十六节）：禁止 Agent 自由 SQL，默认仅 OFFICIAL。
+         */
+        get: operations["search_objects_api_v1_tools_search_objects_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1467,6 +1921,58 @@ export interface paths {
         get: operations["get_trace_api_v1_traces__trace_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/value-ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 价值账本列表（metric_ref 过滤 + 游标分页） */
+        get: operations["list_entries_api_v1_value_ledger_get"];
+        put?: never;
+        /** 登记价值事实（改善前后 + 证据引用） */
+        post: operations["create_entry_api_v1_value_ledger_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/value-ledger/{value_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 价值账本详情 */
+        get: operations["get_entry_api_v1_value_ledger__value_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/value-ledger/{value_id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 人工核验价值事实（Human-Only） */
+        post: operations["verify_entry_api_v1_value_ledger__value_id__verify_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1753,6 +2259,112 @@ export interface components {
             user_id: string;
             /** Username */
             username: string;
+        };
+        /** AdmissionDetail */
+        AdmissionDetail: {
+            /**
+             * Admission Id
+             * Format: uuid
+             */
+            admission_id: string;
+            /** Archived At */
+            archived_at: string | null;
+            /** Checksum */
+            checksum: string | null;
+            /** Classifications */
+            classifications: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Dimensions */
+            dimensions: {
+                [key: string]: unknown;
+            } | null;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Machine Result */
+            machine_result: {
+                [key: string]: unknown;
+            } | null;
+            /** Management Human Reviewer */
+            management_human_reviewer: string | null;
+            /** Management Reviewed At */
+            management_reviewed_at: string | null;
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /** Quality Score */
+            quality_score: number | null;
+            /** Review Result */
+            review_result: string | null;
+            /** Source Human Reviewer */
+            source_human_reviewer: string | null;
+            /** Source Reviewed At */
+            source_reviewed_at: string | null;
+            /** State */
+            state: string;
+            /** Tags */
+            tags: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** AdmissionListItem */
+        AdmissionListItem: {
+            /**
+             * Admission Id
+             * Format: uuid
+             */
+            admission_id: string;
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /** Quality Score */
+            quality_score: number | null;
+            /** Review Result */
+            review_result: string | null;
+            /** State */
+            state: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** AdmissionReviewedResponse */
+        AdmissionReviewedResponse: {
+            /**
+             * Admission Id
+             * Format: uuid
+             */
+            admission_id: string;
+            /** Quality Score */
+            quality_score: number | null;
+            /** Review Result */
+            review_result: string | null;
+            /** State */
+            state: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * AuditLogItem
@@ -2189,6 +2801,153 @@ export interface components {
             /** Sampled */
             sampled: number;
         };
+        /** ClassificationCreate */
+        ClassificationCreate: {
+            /** Confidence */
+            confidence?: number | null;
+            /** Dimension Id */
+            dimension_id?: string | null;
+            /** Label */
+            label: string;
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /** Rule Ref */
+            rule_ref?: string | null;
+            /**
+             * Source
+             * @default HUMAN_MAINTAINED
+             * @enum {string}
+             */
+            source: "RULE_BASED" | "HUMAN_MAINTAINED" | "AI_ASSISTED";
+            /** Taxonomy Id */
+            taxonomy_id?: string | null;
+        };
+        /** ClassificationItem */
+        ClassificationItem: {
+            /** Approved At */
+            approved_at: string | null;
+            /** Approved By */
+            approved_by: string | null;
+            /**
+             * Classification Id
+             * Format: uuid
+             */
+            classification_id: string;
+            /** Confidence */
+            confidence: number | null;
+            /** Dimension Id */
+            dimension_id: string | null;
+            /**
+             * Effective From
+             * Format: date-time
+             */
+            effective_from: string;
+            /** Effective To */
+            effective_to: string | null;
+            /** Label */
+            label: string;
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /** Rule Ref */
+            rule_ref: string | null;
+            /** Source */
+            source: string;
+            /** Taxonomy Id */
+            taxonomy_id: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * CleaningRuleCreate
+         * @description 清洗规则注册（契约 cleaning-rule.schema.json 子集；版本由服务层 +1）。
+         */
+        CleaningRuleCreate: {
+            /**
+             * Auto Fix
+             * @default true
+             */
+            auto_fix: boolean;
+            /** Condition */
+            condition?: string | null;
+            /** Effective From */
+            effective_from?: string | null;
+            /** Field */
+            field?: string | null;
+            /** Object Type */
+            object_type: string;
+            /** Owner */
+            owner: string;
+            /**
+             * Review Required
+             * @default false
+             */
+            review_required: boolean;
+            /** Rule Name */
+            rule_name: string;
+            /**
+             * Rule Type
+             * @enum {string}
+             */
+            rule_type: "FORMAT" | "NORMALIZATION" | "DEDUPLICATION" | "MAPPING" | "RANGE_CHECK" | "REFERENTIAL_CHECK" | "BUSINESS_RULE" | "UNIT_CONVERSION" | "CURRENCY_NORMALIZATION" | "ENTITY_RESOLUTION";
+            /**
+             * Severity
+             * @default WARN
+             * @enum {string}
+             */
+            severity: "BLOCK" | "WARN" | "INFO";
+            /** Transformation */
+            transformation?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * CleaningRuleItem
+         * @description 规则列表/详情项。
+         */
+        CleaningRuleItem: {
+            /** Auto Fix */
+            auto_fix: boolean;
+            /** Condition */
+            condition: string | null;
+            /**
+             * Effective From
+             * Format: date-time
+             */
+            effective_from: string;
+            /** Effective To */
+            effective_to: string | null;
+            /** Field */
+            field: string | null;
+            /** Object Type */
+            object_type: string;
+            /** Owner */
+            owner: string;
+            /** Review Required */
+            review_required: boolean;
+            /**
+             * Rule Id
+             * Format: uuid
+             */
+            rule_id: string;
+            /** Rule Name */
+            rule_name: string;
+            /** Rule Type */
+            rule_type: string;
+            /** Severity */
+            severity: string;
+            /** Transformation */
+            transformation: {
+                [key: string]: unknown;
+            };
+            /** Version */
+            version: number;
+        };
         /**
          * CoverageByType
          * @description 分类型覆盖率（by_type 行）。
@@ -2313,6 +3072,25 @@ export interface components {
             /** Decision Type */
             decision_type: string;
         };
+        /** DimensionCreate */
+        DimensionCreate: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /** DimensionItem */
+        DimensionItem: {
+            /** Code */
+            code: string;
+            /**
+             * Dimension Id
+             * Format: uuid
+             */
+            dimension_id: string;
+            /** Name */
+            name: string;
+        };
         /**
          * DimensionScore
          * @description 维度评分行（四段派生；domain ∈ reconciliation/coverage/orphans/
@@ -2361,6 +3139,45 @@ export interface components {
         DrillRecordsOut: {
             /** Items */
             items?: components["schemas"]["DrillRecord"][];
+        };
+        /** EntityAliasCreate */
+        EntityAliasCreate: {
+            /** Alias */
+            alias: string;
+            /** Canonical Ref */
+            canonical_ref?: string | null;
+            /** Confidence */
+            confidence?: number | null;
+            /** Object Type */
+            object_type: string;
+            /**
+             * Source
+             * @default HUMAN_MAINTAINED
+             * @enum {string}
+             */
+            source: "RULE_BASED" | "HUMAN_MAINTAINED" | "AI_ASSISTED";
+        };
+        /** EntityAliasItem */
+        EntityAliasItem: {
+            /** Alias */
+            alias: string;
+            /**
+             * Alias Id
+             * Format: uuid
+             */
+            alias_id: string;
+            /** Approved At */
+            approved_at: string | null;
+            /** Approved By */
+            approved_by: string | null;
+            /** Canonical Ref */
+            canonical_ref: string | null;
+            /** Confidence */
+            confidence: number | null;
+            /** Object Type */
+            object_type: string;
+            /** Source */
+            source: string;
         };
         /**
          * ErrorBody
@@ -2831,6 +3648,46 @@ export interface components {
             /** Expected Revision */
             expected_revision?: number | null;
         };
+        /** ImportErrorItem */
+        ImportErrorItem: {
+            /**
+             * Code
+             * @default VALIDATION_ERROR
+             */
+            code: string;
+            /** Message */
+            message: string;
+            /** Row */
+            row: number;
+        };
+        /**
+         * ImportStats
+         * @description 导入结果：received=解析行数、registered/duplicated/failed 沿管道口径。
+         */
+        ImportStats: {
+            /**
+             * Duplicated
+             * @default 0
+             */
+            duplicated: number;
+            /** Errors */
+            errors?: components["schemas"]["ImportErrorItem"][];
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /**
+             * Received
+             * @default 0
+             */
+            received: number;
+            /**
+             * Registered
+             * @default 0
+             */
+            registered: number;
+        };
         /**
          * InventoryResponse
          * @description GET /tools/inventory 响应（warehouses[] + total_available + snapshot_at）。
@@ -2891,6 +3748,72 @@ export interface components {
             lead_time_days?: number | null;
             /** Material Code */
             material_code?: string | null;
+        };
+        /** LineageDetail */
+        LineageDetail: {
+            /** Classification Version */
+            classification_version: string | null;
+            /** Cleaning Rule Version */
+            cleaning_rule_version: string | null;
+            /**
+             * Lineage Id
+             * Format: uuid
+             */
+            lineage_id: string;
+            /** Management Review Ref */
+            management_review_ref: string | null;
+            /** Object */
+            object?: {
+                [key: string]: unknown;
+            } | null;
+            /** Official Version */
+            official_version: string;
+            /** Operator */
+            operator: string;
+            /** Source Record Id */
+            source_record_id: string;
+            /** Source Review Ref */
+            source_review_ref: string | null;
+            /** Standardization Rule Version */
+            standardization_rule_version: string | null;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /** Transformation Id */
+            transformation_id: string | null;
+        };
+        /** LineageItem */
+        LineageItem: {
+            /** Classification Version */
+            classification_version: string | null;
+            /** Cleaning Rule Version */
+            cleaning_rule_version: string | null;
+            /**
+             * Lineage Id
+             * Format: uuid
+             */
+            lineage_id: string;
+            /** Management Review Ref */
+            management_review_ref: string | null;
+            /** Official Version */
+            official_version: string;
+            /** Operator */
+            operator: string;
+            /** Source Record Id */
+            source_record_id: string;
+            /** Source Review Ref */
+            source_review_ref: string | null;
+            /** Standardization Rule Version */
+            standardization_rule_version: string | null;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /** Transformation Id */
+            transformation_id: string | null;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -3028,6 +3951,111 @@ export interface components {
             reviewed_by: string;
             /** Status */
             status: string;
+        };
+        /**
+         * MetricCreateRequest
+         * @description 注册指标口径（新版本自动收旧 effective_to；definition_owner 为业务域）。
+         */
+        MetricCreateRequest: {
+            /** Business Definition */
+            business_definition?: string | null;
+            /** Code */
+            code: string;
+            /** Definition Owner */
+            definition_owner?: string | null;
+            /**
+             * Definition Source
+             * @default DOMAIN
+             */
+            definition_source: ("M01_KERNEL" | "DOMAIN") | null;
+            /** Dimension */
+            dimension?: string[];
+            /** Formula */
+            formula?: string | null;
+            /** Name */
+            name: string;
+            /** Owner */
+            owner: string;
+            /** Period Rule */
+            period_rule?: string | null;
+            /** Snapshot Policy */
+            snapshot_policy?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Target Owner */
+            target_owner?: string | null;
+            /** Unit */
+            unit?: string | null;
+        };
+        /** MetricItem */
+        MetricItem: {
+            /** Business Definition */
+            business_definition: string | null;
+            /** Code */
+            code: string;
+            /** Definition Owner */
+            definition_owner: string | null;
+            /** Definition Source */
+            definition_source: string | null;
+            /**
+             * Effective From
+             * Format: date-time
+             */
+            effective_from: string;
+            /** Effective To */
+            effective_to: string | null;
+            /** Formula */
+            formula: string | null;
+            /**
+             * Metric Id
+             * Format: uuid
+             */
+            metric_id: string;
+            /** Name */
+            name: string;
+            /** Owner */
+            owner: string;
+            /** Period Rule */
+            period_rule: string | null;
+            /** Target Owner */
+            target_owner: string | null;
+            /** Unit */
+            unit: string | null;
+            /** Version */
+            version: number;
+        };
+        /** MetricValueCreate */
+        MetricValueCreate: {
+            /** Period */
+            period: string;
+            /** Source */
+            source?: string | null;
+            /** Value */
+            value: number;
+        };
+        /** MetricValueItem */
+        MetricValueItem: {
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /**
+             * Metric Id
+             * Format: uuid
+             */
+            metric_id: string;
+            /** Period */
+            period: string;
+            /** Source */
+            source: string | null;
+            /** Value */
+            value: number;
+            /**
+             * Value Id
+             * Format: uuid
+             */
+            value_id: string;
         };
         /**
          * ObjectCreatedResponse
@@ -3297,6 +4325,15 @@ export interface components {
             /** Total */
             total?: number | null;
         };
+        /** Page[AdmissionListItem] */
+        Page_AdmissionListItem_: {
+            /** Items */
+            items: components["schemas"]["AdmissionListItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total */
+            total?: number | null;
+        };
         /** Page[AuditLogItem] */
         Page_AuditLogItem_: {
             /** Items */
@@ -3319,6 +4356,24 @@ export interface components {
         Page_CaseListItem_: {
             /** Items */
             items: components["schemas"]["CaseListItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total */
+            total?: number | null;
+        };
+        /** Page[CleaningRuleItem] */
+        Page_CleaningRuleItem_: {
+            /** Items */
+            items: components["schemas"]["CleaningRuleItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total */
+            total?: number | null;
+        };
+        /** Page[EntityAliasItem] */
+        Page_EntityAliasItem_: {
+            /** Items */
+            items: components["schemas"]["EntityAliasItem"][];
             /** Next Cursor */
             next_cursor?: string | null;
             /** Total */
@@ -3360,6 +4415,15 @@ export interface components {
             /** Total */
             total?: number | null;
         };
+        /** Page[MetricItem] */
+        Page_MetricItem_: {
+            /** Items */
+            items: components["schemas"]["MetricItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total */
+            total?: number | null;
+        };
         /** Page[ObjectResponse] */
         Page_ObjectResponse_: {
             /** Items */
@@ -3373,6 +4437,24 @@ export interface components {
         Page_PolicyItem_: {
             /** Items */
             items: components["schemas"]["PolicyItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total */
+            total?: number | null;
+        };
+        /** Page[RawRecordItem] */
+        Page_RawRecordItem_: {
+            /** Items */
+            items: components["schemas"]["RawRecordItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total */
+            total?: number | null;
+        };
+        /** Page[ResultListItem] */
+        Page_ResultListItem_: {
+            /** Items */
+            items: components["schemas"]["ResultListItem"][];
             /** Next Cursor */
             next_cursor?: string | null;
             /** Total */
@@ -3432,6 +4514,15 @@ export interface components {
             /** Total */
             total?: number | null;
         };
+        /** Page[ValueLedgerItem] */
+        Page_ValueLedgerItem_: {
+            /** Items */
+            items: components["schemas"]["ValueLedgerItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total */
+            total?: number | null;
+        };
         /**
          * PendingDecisionItem
          * @description 待决案例项（B.9 decisions/pending；options 为 JSONB 原样透传）。
@@ -3467,6 +4558,30 @@ export interface components {
             items?: components["schemas"]["PendingDecisionItem"][];
             /** Total Pending */
             total_pending: number;
+        };
+        /** PeriodKindItem */
+        PeriodKindItem: {
+            /** Description */
+            description: string;
+            /** Kind */
+            kind: string;
+        };
+        /** PeriodWindowOut */
+        PeriodWindowOut: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
         };
         /**
          * PolicyCreateRequest
@@ -3644,6 +4759,39 @@ export interface components {
             task_type: string;
         };
         /**
+         * RawRecordItem
+         * @description RAW 只读项（不可改；列表不含 raw_payload 大字段）。
+         */
+        RawRecordItem: {
+            /** Batch Id */
+            batch_id: string | null;
+            /** Checksum */
+            checksum: string;
+            /** Object Type */
+            object_type: string;
+            /**
+             * Raw Record Id
+             * Format: uuid
+             */
+            raw_record_id: string;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /** Schema Version */
+            schema_version: string | null;
+            /** Source Record Id */
+            source_record_id: string;
+            /** Source System */
+            source_system: string;
+            /**
+             * Source Timestamp
+             * Format: date-time
+             */
+            source_timestamp: string;
+        };
+        /**
          * RecheckAccepted
          * @description 202 响应：任务已登记（后台异步执行，经 GET tasks/{id} 轮询终态）。
          */
@@ -3739,6 +4887,204 @@ export interface components {
             period?: string | null;
             /** Recent Changes Summary */
             recent_changes_summary?: string[];
+        };
+        /**
+         * ResultCreateRequest
+         * @description POST /results：evidence_refs 必填非空（Result→Evidence 100% 硬约束）。
+         */
+        ResultCreateRequest: {
+            /** Domain */
+            domain: string;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Generated By */
+            generated_by: string;
+            /** Metric Refs */
+            metric_refs?: string[];
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /** Period */
+            period?: string | null;
+            /** Result Type */
+            result_type: string;
+            /** Source Refs */
+            source_refs?: string[];
+            /** Status */
+            status: string;
+            /** Value */
+            value?: {
+                [key: string]: unknown;
+            };
+        };
+        /** ResultCreatedResponse */
+        ResultCreatedResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Result Id
+             * Format: uuid
+             */
+            result_id: string;
+            /** Status */
+            status: string;
+        };
+        /** ResultDetailResponse */
+        ResultDetailResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Domain */
+            domain: string;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Generated By */
+            generated_by: string;
+            /** Metric Refs */
+            metric_refs: unknown[];
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /** Period */
+            period: string | null;
+            /**
+             * Result Id
+             * Format: uuid
+             */
+            result_id: string;
+            /** Result Type */
+            result_type: string;
+            /** Source Refs */
+            source_refs: unknown[];
+            /** Status */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Value */
+            value: {
+                [key: string]: unknown;
+            };
+            /** Verified At */
+            verified_at: string | null;
+            /** Verified By */
+            verified_by: string | null;
+            /** Verified Status */
+            verified_status: string | null;
+            /** Version */
+            version: number;
+        };
+        /** ResultListItem */
+        ResultListItem: {
+            /** Domain */
+            domain: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /** Period */
+            period: string | null;
+            /**
+             * Result Id
+             * Format: uuid
+             */
+            result_id: string;
+            /** Result Type */
+            result_type: string;
+            /** Status */
+            status: string;
+            /** Verified Status */
+            verified_status: string | null;
+        };
+        /** ReviewItem */
+        ReviewItem: {
+            /** Comment */
+            comment: string | null;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Human Decision */
+            human_decision: string;
+            /** Human Reviewer */
+            human_reviewer: string;
+            /** Machine Result */
+            machine_result: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Review Id
+             * Format: uuid
+             */
+            review_id: string;
+            /**
+             * Reviewed At
+             * Format: date-time
+             */
+            reviewed_at: string;
+            /** Stage */
+            stage: string;
+        };
+        /**
+         * ReviewRequest
+         * @description A2/A3 人工审核请求（decision 六结果 + 意见）。
+         */
+        ReviewRequest: {
+            /** Comment */
+            comment?: string | null;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVED" | "APPROVED_WITH_WARNING" | "RETURN_FOR_CORRECTION" | "REJECTED" | "SUSPENDED" | "ESCALATED";
+            /** Evidence Ids */
+            evidence_ids?: string[];
+        };
+        /**
+         * SearchObjectItem
+         * @description search-objects 结果项（T33）：对象标识 + 属性。
+         */
+        SearchObjectItem: {
+            /** Attributes */
+            attributes: {
+                [key: string]: unknown;
+            };
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /** Object Type */
+            object_type: string;
+            /** Source Id */
+            source_id: string;
+            /** Source System */
+            source_system: string;
+        };
+        /** SearchObjectsResponse */
+        SearchObjectsResponse: {
+            /** Items */
+            items: components["schemas"]["SearchObjectItem"][];
         };
         /**
          * SearchResponse
@@ -3941,6 +5287,64 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** TagAttachItem */
+        TagAttachItem: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /**
+             * Object Tag Id
+             * Format: uuid
+             */
+            object_tag_id: string;
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
+        };
+        /**
+         * TagAttachRequest
+         * @description 对象标签挂接（T33 search_objects 前置）。
+         */
+        TagAttachRequest: {
+            /**
+             * Object Id
+             * Format: uuid
+             */
+            object_id: string;
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
+        };
+        /** TagCreate */
+        TagCreate: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /** TagItem */
+        TagItem: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
+        };
         /**
          * TaskLogLine
          * @description 任务日志行（形状对齐 mocks/types.ts QualityTask.logs）。
@@ -3958,6 +5362,35 @@ export interface components {
              * Format: date-time
              */
             ts: string;
+        };
+        /** TaxonomyCreate */
+        TaxonomyCreate: {
+            /**
+             * Dimension Id
+             * Format: uuid
+             */
+            dimension_id: string;
+            /** Label */
+            label: string;
+            /** Parent Id */
+            parent_id?: string | null;
+        };
+        /** TaxonomyItem */
+        TaxonomyItem: {
+            /**
+             * Dimension Id
+             * Format: uuid
+             */
+            dimension_id: string;
+            /** Label */
+            label: string;
+            /** Parent Id */
+            parent_id: string | null;
+            /**
+             * Taxonomy Id
+             * Format: uuid
+             */
+            taxonomy_id: string;
         };
         /**
          * TenantAdminCreate
@@ -4615,23 +6048,77 @@ export interface components {
             /** Error Type */
             type: string;
         };
-        /**
-         * VerifyResponse
-         * @description GET /evidence/{id}/verify 响应：重算比对结果（失败同事务落告警审计）。
-         */
-        VerifyResponse: {
+        /** ValueLedgerCreate */
+        ValueLedgerCreate: {
+            /** After Value */
+            after_value?: number | null;
+            /** Baseline Ref */
+            baseline_ref?: string | null;
+            /** Before Value */
+            before_value?: number | null;
+            /** Delta */
+            delta?: number | null;
+            /** Evidence Refs */
+            evidence_refs?: string[];
+            /** Financial Value */
+            financial_value?: number | null;
+            /** Initiative Ref */
+            initiative_ref?: string | null;
+            /** Metric Ref */
+            metric_ref?: string | null;
+        };
+        /** ValueLedgerItem */
+        ValueLedgerItem: {
+            /** After Value */
+            after_value: number | null;
+            /** Baseline Ref */
+            baseline_ref: string | null;
+            /** Before Value */
+            before_value: number | null;
             /**
-             * Evidence Id
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Delta */
+            delta: number | null;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Financial Value */
+            financial_value: number | null;
+            /** Initiative Ref */
+            initiative_ref: string | null;
+            /** Metric Ref */
+            metric_ref: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Value Id
              * Format: uuid
              */
-            evidence_id: string;
-            /** Valid */
-            valid: boolean;
+            value_id: string;
+            /** Verified At */
+            verified_at: string | null;
+            /** Verified By */
+            verified_by: string | null;
+        };
+        /** ValueLedgerVerifyResponse */
+        ValueLedgerVerifyResponse: {
+            /**
+             * Value Id
+             * Format: uuid
+             */
+            value_id: string;
             /**
              * Verified At
              * Format: date-time
              */
             verified_at: string;
+            /** Verified By */
+            verified_by: string;
         };
         /**
          * WarehouseItem
@@ -4644,6 +6131,24 @@ export interface components {
             reserved: number;
             /** Warehouse */
             warehouse?: string | null;
+        };
+        /**
+         * VerifyResponse
+         * @description GET /evidence/{id}/verify 响应：重算比对结果（失败同事务落告警审计）。
+         */
+        edp_api__modules__evidence__schemas__VerifyResponse: {
+            /**
+             * Evidence Id
+             * Format: uuid
+             */
+            evidence_id: string;
+            /** Valid */
+            valid: boolean;
+            /**
+             * Verified At
+             * Format: date-time
+             */
+            verified_at: string;
         };
         /** TenantInfo */
         edp_api__modules__platform__schemas__TenantInfo: {
@@ -4658,6 +6163,23 @@ export interface components {
              * Format: uuid
              */
             tenant_id: string;
+        };
+        /** VerifyResponse */
+        edp_api__modules__result__schemas__VerifyResponse: {
+            /**
+             * Result Id
+             * Format: uuid
+             */
+            result_id: string;
+            /**
+             * Verified At
+             * Format: date-time
+             */
+            verified_at: string;
+            /** Verified By */
+            verified_by: string;
+            /** Verified Status */
+            verified_status: string;
         };
         /**
          * TenantInfo
@@ -5518,6 +7040,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_file_api_v1_admin_ingest_file_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportStats"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
@@ -7168,7 +8737,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VerifyResponse"];
+                    "application/json": components["schemas"]["edp_api__modules__evidence__schemas__VerifyResponse"];
                 };
             };
             /** @description UNAUTHENTICATED：未认证或凭据无效 */
@@ -7191,6 +8760,1268 @@ export interface operations {
             };
             /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_admissions_api_v1_governance_admission_get: {
+        parameters: {
+            query?: {
+                state?: ("RECEIVED" | "PROFILED" | "CLEANED" | "STANDARDIZED" | "CLASSIFIED" | "SOURCE_REVIEW" | "SOURCE_APPROVED" | "MANAGEMENT_REVIEW" | "MANAGEMENT_APPROVED" | "OFFICIAL" | "ARCHIVED" | "RETURNED" | "REJECTED" | "SUSPENDED" | "ESCALATED") | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_AdmissionListItem_"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_admission_api_v1_governance_admission__admission_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                admission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdmissionDetail"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_api_v1_governance_admission__admission_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                admission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdmissionReviewedResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常；GUARD_POLICY_DENIED：策略拒绝该操作 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description INVALID_TRANSITION：状态机非法转移 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    management_review_api_v1_governance_admission__admission_id__management_review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                admission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdmissionReviewedResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常；GUARD_POLICY_DENIED：策略拒绝该操作 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description INVALID_TRANSITION：状态机非法转移 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_reviews_api_v1_governance_admission__admission_id__reviews_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                admission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    source_review_api_v1_governance_admission__admission_id__source_review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                admission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdmissionReviewedResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常；GUARD_POLICY_DENIED：策略拒绝该操作 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description INVALID_TRANSITION：状态机非法转移 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_classifications_api_v1_governance_classifications_get: {
+        parameters: {
+            query?: {
+                object_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cleaning_rules_api_v1_governance_cleaning_rules_get: {
+        parameters: {
+            query?: {
+                object_type?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CleaningRuleItem_"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_cleaning_rule_api_v1_governance_cleaning_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CleaningRuleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CleaningRuleItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_dimensions_api_v1_governance_dimensions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DimensionItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_dimension_api_v1_governance_dimensions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DimensionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DimensionItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_entity_aliases_api_v1_governance_entity_aliases_get: {
+        parameters: {
+            query?: {
+                object_type?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_EntityAliasItem_"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_entity_alias_api_v1_governance_entity_aliases_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntityAliasCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityAliasItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_classification_api_v1_governance_object_classifications_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassificationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_object_tags_api_v1_governance_object_tags_get: {
+        parameters: {
+            query?: {
+                object_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagAttachItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attach_object_tag_api_v1_governance_object_tags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagAttachRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagAttachItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_raw_records_api_v1_governance_raw_records_get: {
+        parameters: {
+            query?: {
+                object_type?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_RawRecordItem_"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tags_api_v1_governance_tags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_tag_api_v1_governance_tags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_taxonomies_api_v1_governance_taxonomies_get: {
+        parameters: {
+            query?: {
+                dimension_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxonomyItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_taxonomy_api_v1_governance_taxonomies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaxonomyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxonomyItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7241,6 +10072,113 @@ export interface operations {
             };
             /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_lineage_api_v1_lineage_get: {
+        parameters: {
+            query: {
+                source_record_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineageItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_lineage_api_v1_lineage__lineage_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lineage_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineageDetail"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7426,6 +10364,246 @@ export interface operations {
             };
             /** @description CONFLICT：版本冲突（响应附 current_revision） */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_metrics_api_v1_metrics_get: {
+        parameters: {
+            query?: {
+                code?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_MetricItem_"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_metric_api_v1_metrics_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetricCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_values_api_v1_metrics__metric_id__values_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                metric_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricValueItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_value_api_v1_metrics__metric_id__values_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                metric_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetricValueCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricValueItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7656,6 +10834,331 @@ export interface operations {
                 };
             };
             /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_aeos_window_api_v1_periods_aeos_get: {
+        parameters: {
+            query?: {
+                /** @description 指定日期（缺省=今天 UTC） */
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodWindowOut"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_period_kinds_api_v1_periods_kinds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodKindItem"][];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_results_api_v1_results_get: {
+        parameters: {
+            query?: {
+                result_type?: string | null;
+                status?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ResultListItem_"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_result_api_v1_results_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResultCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultCreatedResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_result_api_v1_results__result_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                result_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultDetailResponse"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_result_api_v1_results__result_id__verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                result_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["edp_api__modules__result__schemas__VerifyResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常；GUARD_POLICY_DENIED：策略拒绝该操作 */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8997,6 +12500,8 @@ export interface operations {
             query: {
                 /** @description 产品 code */
                 product_code: string;
+                /** @description 仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true） */
+                official_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -9071,7 +12576,10 @@ export interface operations {
     };
     get_customer_api_v1_tools_customers__customer_code__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true） */
+                official_only?: boolean;
+            };
             header?: never;
             path: {
                 customer_code: string;
@@ -9150,6 +12658,8 @@ export interface operations {
             query: {
                 /** @description 物料 code */
                 material_code: string;
+                /** @description 仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true） */
+                official_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -9229,6 +12739,8 @@ export interface operations {
                 customer?: string | null;
                 /** @description 订单状态过滤 */
                 status?: string | null;
+                /** @description 仅返回 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true） */
+                official_only?: boolean;
                 limit?: number;
             };
             header?: never;
@@ -9295,7 +12807,10 @@ export interface operations {
     };
     get_order_api_v1_tools_orders__order_no__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true） */
+                official_only?: boolean;
+            };
             header?: never;
             path: {
                 order_no: string;
@@ -9376,6 +12891,8 @@ export interface operations {
                 material_code?: string | null;
                 /** @description 采购单状态过滤 */
                 status?: string | null;
+                /** @description 仅返回 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true） */
+                official_only?: boolean;
                 limit?: number;
             };
             header?: never;
@@ -9440,11 +12957,86 @@ export interface operations {
             };
         };
     };
+    search_objects_api_v1_tools_search_objects_get: {
+        parameters: {
+            query?: {
+                object_type?: string | null;
+                classification?: string | null;
+                dimension?: string | null;
+                tag?: string | null;
+                /** @description 仅返回 OFFICIAL/ARCHIVED 对象（缺省 true） */
+                official_only?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchObjectsResponse"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description METHOD_NOT_ALLOWED：方法不允许 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description RATE_LIMITED：请求超出租户限流 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     list_supplier_lead_times_api_v1_tools_supplier_lead_times_get: {
         parameters: {
             query: {
                 /** @description 供应商 code */
                 supplier_code: string;
+                /** @description 仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true） */
+                official_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -9674,6 +13266,242 @@ export interface operations {
                 };
             };
             /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_entries_api_v1_value_ledger_get: {
+        parameters: {
+            query?: {
+                metric_ref?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ValueLedgerItem_"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_entry_api_v1_value_ledger_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValueLedgerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValueLedgerItem"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_entry_api_v1_value_ledger__value_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                value_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValueLedgerItem"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_entry_api_v1_value_ledger__value_id__verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                value_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValueLedgerVerifyResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常；GUARD_POLICY_DENIED：策略拒绝该操作 */
             403: {
                 headers: {
                     [name: string]: unknown;

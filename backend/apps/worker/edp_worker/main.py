@@ -22,6 +22,7 @@ from edp_api.core.events import (
     subscribers,
 )
 
+from edp_worker.admission_job import admission_loop
 from edp_worker.outbox_dispatch import run_forever
 
 logger = logging.getLogger("edp.worker")
@@ -42,7 +43,11 @@ async def _work() -> None:
     register_subscriber(LoggingSubscriber())
     register_subscriber(EBMSNotifyStubSubscriber())
     logger.info("worker started subscribers=%d", len(subscribers))
-    await run_forever(engine, list(subscribers))
+    # 并发常驻：outbox 分发 + admission 机器预审调度（V1.2 T32，缺省 60s）
+    await asyncio.gather(
+        run_forever(engine, list(subscribers)),
+        admission_loop(engine),
+    )
 
 
 async def main() -> None:

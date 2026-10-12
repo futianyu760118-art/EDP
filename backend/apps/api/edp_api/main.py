@@ -27,19 +27,26 @@ from edp_api.modules.ebms.router import router as ebms_router
 from edp_api.modules.events.router import router as events_router
 from edp_api.modules.evidence.router import admin_router as evidence_admin_router
 from edp_api.modules.evidence.router import router as evidence_router
+from edp_api.modules.governance.router import router as governance_router
 from edp_api.modules.health.router import router as health_router
+from edp_api.modules.ingest.router import router as ingest_router
+from edp_api.modules.lineage.router import router as lineage_router
 from edp_api.modules.memories.router import router as memories_router
+from edp_api.modules.metric.router import router as metric_router
+from edp_api.modules.period.router import router as period_router
 from edp_api.modules.platform.router import router as platform_router
 from edp_api.modules.quality.router import drills_router as quality_drills_router
 from edp_api.modules.quality.router import outbox_router as quality_outbox_router
 from edp_api.modules.quality.router import router as quality_router
 from edp_api.modules.registry.router import router as registry_router
+from edp_api.modules.result.router import router as result_router
 from edp_api.modules.search.router import router as search_router
 from edp_api.modules.tenantmgmt.platform_router import admin_router as tenant_admin_router
 from edp_api.modules.tenantmgmt.platform_router import router as tenant_platform_router
 from edp_api.modules.tenantmgmt.router import router as tenantmgmt_router
 from edp_api.modules.tools.router import router as tools_router
 from edp_api.modules.traces.router import router as traces_router
+from edp_api.modules.value.router import router as value_router
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +133,20 @@ def create_app(extra_routers: Sequence[APIRouter] = ()) -> FastAPI:
     app.include_router(quality_outbox_router)
     # search 路由（W6 T1）：全局搜索三组聚合（对象/事件/证据，RLS 收敛）
     app.include_router(search_router)
+    # governance 路由（V1.2 Phase 2）：规则/别名/分类注册 + RAW 只读 + 准入审核
+    app.include_router(governance_router)
+    # lineage 路由（V1.2 Phase 3）：数据血缘只读（governance:read 轨道）
+    app.include_router(lineage_router)
+    # result 路由（V1.2 Phase 3）：经营结果创建/列表/详情/核验
+    app.include_router(result_router)
+    # metric 路由（V1.2 Phase 4）：指标口径注册 + 计量值
+    app.include_router(metric_router)
+    # period 路由（V1.2 Phase 4）：AEOS 经营窗口 + 周期枚举
+    app.include_router(period_router)
+    # value 路由（V1.2 Phase 4）：价值账本（复用 metric 权限轨道）
+    app.include_router(value_router)
+    # ingest 文件导入路由（V1.2 Phase 5 / T30）：Excel/CSV 通道
+    app.include_router(ingest_router)
     for router in extra_routers:
         app.include_router(router)
 

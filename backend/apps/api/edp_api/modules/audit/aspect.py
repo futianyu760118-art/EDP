@@ -253,7 +253,10 @@ def _serialize_value(value: object) -> object:
                 "size": len(text),
                 "preview": text[:_PREVIEW_TEXT],
             }
-        return masked
+        # 往返反序列化：容器内 UUID/datetime 经 default=str 转字符串后再
+        # 落 JSONB（原样返回 masked 会让 UUID 对象流入 JSONB 序列化路径
+        # ——V1.2 result.evidence_refs 非空 UUID[] 实测暴露）
+        return json.loads(text)
     if isinstance(value, (UUID, datetime, date, Decimal)):
         return str(value)
     return repr(value)[:_MAX_TEXT]

@@ -97,11 +97,23 @@ def _install_aspect() -> None:
 
 @pytest.fixture
 async def demo(
-    app_role_engine: AsyncEngine, default_tenant_id: UUID
+    app_role_engine: AsyncEngine, default_tenant_id: UUID, db_session: AsyncSession
 ) -> demo_service.SeedStats:
-    """default 租户演示数据集（场景 2 案例主线）；清场见 _clean_m4_rows。"""
+    """default 租户演示数据集（场景 2 案例主线）；清场见 _clean_m4_rows。
+
+    V1.2 T21：tools 缺省 official_only=true——种子后统一置 CURATED
+    （目标态准入后语义；门禁行为见 test_v12_fact_layer）。
+    """
     stats = await demo_service.seed(app_role_engine, default_tenant_id)
     assert stats.failed == 0
+    await db_session.execute(
+        text(
+            "UPDATE master.business_objects SET layer_status = 'CURATED'"
+            " WHERE tenant_id = :t"
+        ),
+        {"t": default_tenant_id},
+    )
+    await db_session.commit()
     return stats
 
 

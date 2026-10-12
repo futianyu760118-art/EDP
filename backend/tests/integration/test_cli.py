@@ -119,6 +119,39 @@ async def _clean_pipeline_rows(db_session: AsyncSession) -> None:
             f" (SELECT object_id FROM master.business_objects WHERE {_BO_SCOPE})"
         )
     )
+    # governance（V1.2 0014）：admission/clean/classification FK 指向
+    # business_objects——先清（先子后父：review→admission→classification；
+    # clean→raw），否则 business_objects 删除被 FK 阻断
+    await db_session.execute(
+        text(
+            "DELETE FROM governance.review_records WHERE tenant_id ="
+            " (SELECT tenant_id FROM platform.tenants WHERE slug = 'default')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "DELETE FROM governance.admission_records WHERE tenant_id ="
+            " (SELECT tenant_id FROM platform.tenants WHERE slug = 'default')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "DELETE FROM governance.object_classifications WHERE tenant_id ="
+            " (SELECT tenant_id FROM platform.tenants WHERE slug = 'default')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "DELETE FROM governance.clean_records WHERE tenant_id ="
+            " (SELECT tenant_id FROM platform.tenants WHERE slug = 'default')"
+        )
+    )
+    await db_session.execute(
+        text(
+            "DELETE FROM governance.raw_records WHERE tenant_id ="
+            " (SELECT tenant_id FROM platform.tenants WHERE slug = 'default')"
+        )
+    )
     await db_session.execute(
         text(f"DELETE FROM master.business_objects WHERE {_BO_SCOPE}")
     )

@@ -146,6 +146,20 @@ class SupplierLeadTimesResponse(BaseModel):
     evidence_hint: EvidenceHint
 
 
+class SearchObjectItem(BaseModel):
+    """search-objects 结果项（T33）：对象标识 + 属性。"""
+
+    object_id: UUID
+    object_type: str
+    source_system: str
+    source_id: str
+    attributes: dict[str, Any]
+
+
+class SearchObjectsResponse(BaseModel):
+    items: list[SearchObjectItem]
+
+
 class CustomerResponse(BaseModel):
     """GET /tools/customers/{code} 响应（name/level/attributes）。"""
 

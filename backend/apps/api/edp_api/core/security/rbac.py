@@ -29,6 +29,16 @@ from edp_api.core.security.principal import Principal
 # 0013 新增 quality:read → PLATFORM_ADMIN/ADMIN/MANAGER/ANALYST、
 # quality:run → PLATFORM_ADMIN/ADMIN（质量查询/重跑管理轨道，W5 基线；
 # 任务执行走 ops.tasks 登记，无 SERVICE scope 轨道）。
+# 0014 新增（V1.2 治理）governance:read → PLATFORM_ADMIN/ADMIN/MANAGER/ANALYST、
+# governance:manage → PLATFORM_ADMIN/ADMIN（规则/分类管理轨道）、
+# admission:review → PLATFORM_ADMIN/ADMIN/MANAGER（A2/A3 人工审核轨道，
+# Human-Only：SERVICE 无 scope 轨道）。
+# 0015 新增（V1.2 事实层）result:read → PLATFORM_ADMIN/ADMIN/MANAGER/ANALYST、
+# result:write → PLATFORM_ADMIN/ADMIN/MANAGER（结果读/写轨道；SERVICE 走
+# readonly / write:result scope 轨道）。
+# 0016 新增（V1.2 经营结果层）metric:read → PLATFORM_ADMIN/ADMIN/MANAGER/ANALYST、
+# metric:manage → PLATFORM_ADMIN/ADMIN（指标注册/计量值轨道；value ledger
+# 复用本轨道——读 metric:read、写 metric:manage）。
 ROLE_PERMISSIONS: dict[str, set[str]] = {
     "PLATFORM_ADMIN": {
         "registry:read",
@@ -53,6 +63,13 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "memory:review",
         "quality:read",
         "quality:run",
+        "governance:read",
+        "governance:manage",
+        "admission:review",
+        "result:read",
+        "result:write",
+        "metric:read",
+        "metric:manage",
         "tenant:admin",
     },
     "ADMIN": {
@@ -78,6 +95,13 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "memory:review",
         "quality:read",
         "quality:run",
+        "governance:read",
+        "governance:manage",
+        "admission:review",
+        "result:read",
+        "result:write",
+        "metric:read",
+        "metric:manage",
     },
     "MANAGER": {
         "registry:read",
@@ -100,6 +124,11 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "memory:read",
         "memory:review",
         "quality:read",
+        "governance:read",
+        "admission:review",
+        "result:read",
+        "result:write",
+        "metric:read",
     },
     "ANALYST": {
         "registry:read",
@@ -115,6 +144,9 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "trace:read",
         "memory:read",
         "quality:read",
+        "governance:read",
+        "result:read",
+        "metric:read",
     },
     "SERVICE": {
         "registry:read",

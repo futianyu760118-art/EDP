@@ -43,6 +43,8 @@ from edp_api.modules.tools.schemas import (
     OrderSummary,
     PurchaseOrderItem,
     PurchaseOrderListResponse,
+    SearchObjectItem,
+    SearchObjectsResponse,
     SupplierLeadTimesResponse,
     WarehouseItem,
 )
@@ -51,6 +53,15 @@ DEFAULT_LIMIT = projections_service.DEFAULT_LIMIT
 MAX_LIMIT = projections_service.MAX_LIMIT
 
 _SNAPSHOT_SUFFIX = "_SNAPSHOT"
+
+# official_only（V1.2 T21）：对象须处于 CURATED（=OFFICIAL）/ARCHIVED
+# 才可被 Agent 读取（layer_status 枚举见 business-object.schema.json）
+_OFFICIAL_LAYERS = ("CURATED", "ARCHIVED")
+_OFFICIAL_SQL = text("""
+    SELECT object_id FROM master.business_objects
+    WHERE tenant_id = :tenant_id AND object_id IN :object_ids
+      AND layer_status IN ('CURATED', 'ARCHIVED')
+""").bindparams(bindparam("object_ids", expanding=True))
 
 # 对象集合 → 各对象最新 SNAPSHOT 事件（app 角色阶段执行；跨模块表纯 SQL，
 # 口径同 projections/ingest——模块间仅可 import 对方 service，event ORM
@@ -97,6 +108,116 @@ async def _evidence_hints(
     return hints
 
 
+async def _official_ids(
+    sess: AsyncSession, tenant_id: UUID, object_ids: list[UUID]
+) -> set[UUID]:
+    """对象集合中处于 OFFICIAL/ARCHIVED 的子集（V1.2 T21 official_only）。"""
+    ids = list(dict.fromkeys(object_ids))
+    if not ids:
+        return set()
+    rows = (
+        await sess.execute(
+            _OFFICIAL_SQL, {"tenant_id": tenant_id, "object_ids": ids}
+        )
+    ).mappings()
+    return {row["object_id"] for row in rows}
+
+
+# search-objects（T33）：app 角色阶段 join 过滤（governance 分类/标签表不
+# 在 edp_agent_ro 授权域）拿 object_ids → 只读角色下重读 business_objects
+# 行组装响应（Read-Only 三层约定不变）。
+_SEARCH_OBJECTS_SQL = text("""
+    SELECT bo.object_id
+    FROM master.business_objects bo
+    LEFT JOIN governance.object_classifications oc
+        ON oc.object_id = bo.object_id AND oc.effective_to IS NULL
+    LEFT JOIN governance.dimensions d ON d.dimension_id = oc.dimension_id
+    LEFT JOIN governance.object_tags ot ON ot.object_id = bo.object_id
+    LEFT JOIN governance.tags t ON t.tag_id = ot.tag_id
+    WHERE bo.tenant_id = :tenant_id
+      AND (CAST(:object_type AS text) IS NULL OR bo.object_type = :object_type)
+      AND (CAST(:classification AS text) IS NULL OR oc.label = :classification)
+      AND (CAST(:dimension AS text) IS NULL OR d.code = :dimension)
+      AND (CAST(:tag AS text) IS NULL OR t.code = :tag)
+      AND (:official_only = FALSE OR bo.layer_status IN ('CURATED', 'ARCHIVED'))
+    GROUP BY bo.object_id
+    ORDER BY max(bo.updated_at) DESC, bo.object_id DESC
+    LIMIT :limit
+""")
+
+_SEARCH_OBJECT_ROWS_SQL = text("""
+    SELECT object_id, object_type, source_system, source_id, attributes
+    FROM master.business_objects
+    WHERE tenant_id = :tenant_id AND object_id IN :object_ids
+""").bindparams(bindparam("object_ids", expanding=True))
+
+
+async def search_objects(
+    sess: AsyncSession,
+    tenant_id: UUID,
+    *,
+    object_type: str | None = None,
+    classification: str | None = None,
+    dimension: str | None = None,
+    tag: str | None = None,
+    official_only: bool = True,
+    limit: int = DEFAULT_LIMIT,
+) -> SearchObjectsResponse:
+    """多维查询（V1.2 第四十六节 / T33）：dimensions/classifications/tags/
+    object_type/official_only 过滤；禁止 Agent 自由 SQL。"""
+    limit = max(1, min(limit, MAX_LIMIT))
+    ids = (
+        await sess.execute(
+            _SEARCH_OBJECTS_SQL,
+            {
+                "tenant_id": tenant_id,
+                "object_type": object_type,
+                "classification": classification,
+                "dimension": dimension,
+                "tag": tag,
+                "official_only": official_only,
+                "limit": limit,
+            },
+        )
+    ).scalars().all()
+    if not ids:
+        return SearchObjectsResponse(items=[])
+
+    await read_only_session(sess)
+    rows = (
+        await sess.execute(
+            _SEARCH_OBJECT_ROWS_SQL,
+            {"tenant_id": tenant_id, "object_ids": ids},
+        )
+    ).mappings().all()
+    return SearchObjectsResponse(
+        items=[
+            SearchObjectItem(
+                object_id=row["object_id"],
+                object_type=row["object_type"],
+                source_system=row["source_system"],
+                source_id=row["source_id"],
+                attributes=dict(row["attributes"] or {}),
+            )
+            for row in rows
+        ]
+    )
+
+
+async def _require_official(
+    sess: AsyncSession,
+    tenant_id: UUID,
+    object_id: UUID,
+    official_only: bool,
+) -> None:
+    """official_only 门禁：对象非 OFFICIAL/ARCHIVED → 404（Agent 读不到
+    非正式数据，与不存在同义）。"""
+    if not official_only:
+        return
+    if object_id not in await _official_ids(sess, tenant_id, [object_id]):
+        raise EdpError.not_found("对象未通过数据准入（非 OFFICIAL）")
+
+
 def _hint(object_id: UUID, event_id: UUID | None) -> EvidenceHint:
     return EvidenceHint(object_id=object_id, event_id=event_id)
 
@@ -127,13 +248,20 @@ def _order_summary(view: OrderView, hints: dict[UUID, UUID | None]) -> OrderSumm
     )
 
 
-async def get_order(sess: AsyncSession, tenant_id: UUID, order_no: str) -> OrderDetail:
+async def get_order(
+    sess: AsyncSession,
+    tenant_id: UUID,
+    order_no: str,
+    *,
+    official_only: bool = True,
+) -> OrderDetail:
     """GET /tools/orders/{order_no}：订单详情（客户/金额/状态/交期 + lines）。"""
     object_id = await projections_service.resolve_object_id(
         sess, tenant_id, "ORDER", order_no
     )
     if object_id is None:
         raise EdpError.not_found("订单不存在")
+    await _require_official(sess, tenant_id, object_id, official_only)
     hints = await _evidence_hints(sess, tenant_id, "ORDER", [object_id])
 
     await read_only_session(sess)
@@ -162,11 +290,18 @@ async def list_orders(
     customer_code: str | None = None,
     status: str | None = None,
     limit: int = DEFAULT_LIMIT,
+    official_only: bool = True,
 ) -> OrderListResponse:
-    """GET /tools/orders：订单摘要列表（无 lines 明细；customer/status 过滤）。"""
+    """GET /tools/orders：订单摘要列表（无 lines 明细；customer/status 过滤；
+    official_only 仅返回 OFFICIAL/ARCHIVED 对象）。"""
     pre = await projections_service.list_orders(
         sess, tenant_id, customer_code=customer_code, status=status, limit=limit
     )
+    official = None
+    if official_only:
+        official = await _official_ids(
+            sess, tenant_id, [view.order.order_id for view in pre]
+        )
     hints = await _evidence_hints(
         sess, tenant_id, "ORDER", [view.order.order_id for view in pre]
     )
@@ -175,13 +310,19 @@ async def list_orders(
     views = await projections_service.list_orders(
         sess, tenant_id, customer_code=customer_code, status=status, limit=limit
     )
+    if official is not None:
+        views = [view for view in views if view.order.order_id in official]
     return OrderListResponse(
         items=[_order_summary(view, hints) for view in views], next_cursor=None
     )
 
 
 async def get_inventory(
-    sess: AsyncSession, tenant_id: UUID, material_code: str
+    sess: AsyncSession,
+    tenant_id: UUID,
+    material_code: str,
+    *,
+    official_only: bool = True,
 ) -> InventoryResponse:
     """GET /tools/inventory：物料库存（warehouses[] + total_available）。"""
     material_id = await projections_service.resolve_object_id(
@@ -189,6 +330,7 @@ async def get_inventory(
     )
     if material_id is None:
         raise EdpError.not_found("物料不存在")
+    await _require_official(sess, tenant_id, material_id, official_only)
     hints = await _evidence_hints(sess, tenant_id, "MATERIAL", [material_id])
 
     await read_only_session(sess)
@@ -224,11 +366,18 @@ async def list_purchase_orders(
     material_code: str | None = None,
     status: str | None = None,
     limit: int = DEFAULT_LIMIT,
+    official_only: bool = True,
 ) -> PurchaseOrderListResponse:
-    """GET /tools/purchase-orders：采购单列表（material_code/status 过滤）。"""
+    """GET /tools/purchase-orders：采购单列表（material_code/status 过滤；
+    official_only 仅返回 OFFICIAL/ARCHIVED 对象）。"""
     pre = await projections_service.list_purchase_orders(
         sess, tenant_id, material_code=material_code, status=status, limit=limit
     )
+    official = None
+    if official_only:
+        official = await _official_ids(
+            sess, tenant_id, [view.po.po_id for view in pre]
+        )
     hints = await _evidence_hints(
         sess, tenant_id, "PURCHASE_ORDER", [view.po.po_id for view in pre]
     )
@@ -237,6 +386,8 @@ async def list_purchase_orders(
     views = await projections_service.list_purchase_orders(
         sess, tenant_id, material_code=material_code, status=status, limit=limit
     )
+    if official is not None:
+        views = [view for view in views if view.po.po_id in official]
     return PurchaseOrderListResponse(
         items=[
             PurchaseOrderItem(
@@ -254,11 +405,18 @@ async def list_purchase_orders(
     )
 
 
-async def get_bom(sess: AsyncSession, tenant_id: UUID, product_code: str) -> BomResponse:
+async def get_bom(
+    sess: AsyncSession,
+    tenant_id: UUID,
+    product_code: str,
+    *,
+    official_only: bool = True,
+) -> BomResponse:
     """GET /tools/bom：产品 ACTIVE BOM（bom_version + items[]）。"""
     pre = await projections_service.get_active_bom(sess, tenant_id, product_code)
     if pre is None:
         raise EdpError.not_found("产品 BOM 不存在")
+    await _require_official(sess, tenant_id, pre.bom.bom_id, official_only)
     hints = await _evidence_hints(sess, tenant_id, "BOM", [pre.bom.bom_id])
 
     await read_only_session(sess)
@@ -280,7 +438,11 @@ async def get_bom(sess: AsyncSession, tenant_id: UUID, product_code: str) -> Bom
 
 
 async def list_supplier_lead_times(
-    sess: AsyncSession, tenant_id: UUID, supplier_code: str
+    sess: AsyncSession,
+    tenant_id: UUID,
+    supplier_code: str,
+    *,
+    official_only: bool = True,
 ) -> SupplierLeadTimesResponse:
     """GET /tools/supplier-lead-times：供应商交期（lead_times[] + updated_at）。"""
     supplier_id = await projections_service.resolve_object_id(
@@ -288,6 +450,7 @@ async def list_supplier_lead_times(
     )
     if supplier_id is None:
         raise EdpError.not_found("供应商不存在")
+    await _require_official(sess, tenant_id, supplier_id, official_only)
     hints = await _evidence_hints(sess, tenant_id, "SUPPLIER", [supplier_id])
 
     await read_only_session(sess)
@@ -313,7 +476,11 @@ async def list_supplier_lead_times(
 
 
 async def get_customer(
-    sess: AsyncSession, tenant_id: UUID, customer_code: str
+    sess: AsyncSession,
+    tenant_id: UUID,
+    customer_code: str,
+    *,
+    official_only: bool = True,
 ) -> CustomerResponse:
     """GET /tools/customers/{code}：客户主数据（name/level/attributes）。"""
     object_id = await projections_service.resolve_object_id(
@@ -321,6 +488,7 @@ async def get_customer(
     )
     if object_id is None:
         raise EdpError.not_found("客户不存在")
+    await _require_official(sess, tenant_id, object_id, official_only)
     hints = await _evidence_hints(sess, tenant_id, "CUSTOMER", [object_id])
 
     await read_only_session(sess)

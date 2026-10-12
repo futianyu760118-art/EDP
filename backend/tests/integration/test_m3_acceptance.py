@@ -238,6 +238,9 @@ async def test_tools_endpoints_200_with_evidence_hint(
     demo: demo_service.SeedStats,
 ) -> None:
     # 单对象接口（顶层 evidence_hint）：B.8 示例 SO-2026-00123 / X-100 / P-F / S-021 / C-008
+    # V1.2 T21：official_only 缺省 true（仅 OFFICIAL/ARCHIVED）——demo 数据未走
+    # 准入审核，此处显式 false（过渡期适配，记偏差；门禁行为见
+    # test_v12_fact_layer）
     detail_paths: tuple[tuple[str, dict[str, str] | None], ...] = (
         ("/orders/SO-2026-00123", None),
         ("/inventory", {"material_code": "X-100"}),
@@ -246,7 +249,8 @@ async def test_tools_endpoints_200_with_evidence_hint(
         ("/customers/C-008", None),
     )
     for path, params in detail_paths:
-        resp = await client.get(f"{TOOLS}{path}", params=params, headers=DEV_HEADERS)
+        merged = {"official_only": "false", **(params or {})}
+        resp = await client.get(f"{TOOLS}{path}", params=merged, headers=DEV_HEADERS)
         assert resp.status_code == 200, f"{path}: {resp.text}"
         body = resp.json()
         assert "evidence_hint" in body, f"{path}: {body}"
@@ -257,7 +261,9 @@ async def test_tools_endpoints_200_with_evidence_hint(
 
     # 列表接口（envelope.items 每行 evidence_hint 指向自身对象）
     resp = await client.get(
-        f"{TOOLS}/orders", params={"customer": "C-008"}, headers=DEV_HEADERS
+        f"{TOOLS}/orders",
+        params={"customer": "C-008", "official_only": "false"},
+        headers=DEV_HEADERS,
     )
     assert resp.status_code == 200, resp.text
     items = resp.json()["items"]
@@ -269,7 +275,7 @@ async def test_tools_endpoints_200_with_evidence_hint(
 
     resp = await client.get(
         f"{TOOLS}/purchase-orders",
-        params={"material_code": "X-100"},
+        params={"material_code": "X-100", "official_only": "false"},
         headers=DEV_HEADERS,
     )
     assert resp.status_code == 200, resp.text

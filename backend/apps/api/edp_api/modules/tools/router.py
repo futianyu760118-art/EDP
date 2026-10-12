@@ -28,6 +28,7 @@ from edp_api.modules.tools.schemas import (
     OrderDetail,
     OrderListResponse,
     PurchaseOrderListResponse,
+    SearchObjectsResponse,
     SupplierLeadTimesResponse,
 )
 
@@ -60,13 +61,22 @@ async def list_orders(
     sess: DbSession,
     customer: Annotated[str | None, Query(description="客户 code 过滤")] = None,
     status: Annotated[str | None, Query(description="订单状态过滤")] = None,
+    official_only: Annotated[
+        bool,
+        Query(description="仅返回 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true）"),
+    ] = True,
     limit: Annotated[int, Query(ge=1, le=tools_service.MAX_LIMIT)] = (
         tools_service.DEFAULT_LIMIT
     ),
 ) -> OrderListResponse:
     """订单摘要列表（B.8：同详情结构数组，不含 lines 明细）。"""
     return await tools_service.list_orders(
-        sess, principal.tenant_id, customer_code=customer, status=status, limit=limit
+        sess,
+        principal.tenant_id,
+        customer_code=customer,
+        status=status,
+        limit=limit,
+        official_only=official_only,
     )
 
 
@@ -80,9 +90,15 @@ async def get_order(
     order_no: str,
     principal: Annotated[Principal, Depends(require_tools_read())],
     sess: DbSession,
+    official_only: Annotated[
+        bool,
+        Query(description="仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true）"),
+    ] = True,
 ) -> OrderDetail:
-    """订单详情；不存在/跨租户统一 404 NOT_FOUND（不泄露存在性）。"""
-    return await tools_service.get_order(sess, principal.tenant_id, order_no)
+    """订单详情；不存在/跨租户/非 OFFICIAL 统一 404 NOT_FOUND（不泄露存在性）。"""
+    return await tools_service.get_order(
+        sess, principal.tenant_id, order_no, official_only=official_only
+    )
 
 
 @router.get(
@@ -95,9 +111,15 @@ async def get_inventory(
     material_code: Annotated[str, Query(description="物料 code")],
     principal: Annotated[Principal, Depends(require_tools_read())],
     sess: DbSession,
+    official_only: Annotated[
+        bool,
+        Query(description="仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true）"),
+    ] = True,
 ) -> InventoryResponse:
     """物料库存；物料不存在 → 404，无库存行 → 200 空 warehouses。"""
-    return await tools_service.get_inventory(sess, principal.tenant_id, material_code)
+    return await tools_service.get_inventory(
+        sess, principal.tenant_id, material_code, official_only=official_only
+    )
 
 
 @router.get(
@@ -111,6 +133,10 @@ async def list_purchase_orders(
     sess: DbSession,
     material_code: Annotated[str | None, Query(description="物料 code 过滤")] = None,
     status: Annotated[str | None, Query(description="采购单状态过滤")] = None,
+    official_only: Annotated[
+        bool,
+        Query(description="仅返回 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true）"),
+    ] = True,
     limit: Annotated[int, Query(ge=1, le=tools_service.MAX_LIMIT)] = (
         tools_service.DEFAULT_LIMIT
     ),
@@ -122,6 +148,7 @@ async def list_purchase_orders(
         material_code=material_code,
         status=status,
         limit=limit,
+        official_only=official_only,
     )
 
 
@@ -135,9 +162,15 @@ async def get_bom(
     product_code: Annotated[str, Query(description="产品 code")],
     principal: Annotated[Principal, Depends(require_tools_read())],
     sess: DbSession,
+    official_only: Annotated[
+        bool,
+        Query(description="仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true）"),
+    ] = True,
 ) -> BomResponse:
     """产品 ACTIVE BOM；产品/版本不存在 → 404。"""
-    return await tools_service.get_bom(sess, principal.tenant_id, product_code)
+    return await tools_service.get_bom(
+        sess, principal.tenant_id, product_code, official_only=official_only
+    )
 
 
 @router.get(
@@ -150,10 +183,14 @@ async def list_supplier_lead_times(
     supplier_code: Annotated[str, Query(description="供应商 code")],
     principal: Annotated[Principal, Depends(require_tools_read())],
     sess: DbSession,
+    official_only: Annotated[
+        bool,
+        Query(description="仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true）"),
+    ] = True,
 ) -> SupplierLeadTimesResponse:
     """供应商交期；供应商不存在 → 404，无交期行 → 200 空 lead_times。"""
     return await tools_service.list_supplier_lead_times(
-        sess, principal.tenant_id, supplier_code
+        sess, principal.tenant_id, supplier_code, official_only=official_only
     )
 
 
@@ -167,6 +204,46 @@ async def get_customer(
     customer_code: str,
     principal: Annotated[Principal, Depends(require_tools_read())],
     sess: DbSession,
+    official_only: Annotated[
+        bool,
+        Query(description="仅读取 OFFICIAL/ARCHIVED 对象（V1.2 T21，缺省 true）"),
+    ] = True,
 ) -> CustomerResponse:
-    """客户主数据；不存在/跨租户统一 404 NOT_FOUND。"""
-    return await tools_service.get_customer(sess, principal.tenant_id, customer_code)
+    """客户主数据；不存在/跨租户/非 OFFICIAL 统一 404 NOT_FOUND。"""
+    return await tools_service.get_customer(
+        sess, principal.tenant_id, customer_code, official_only=official_only
+    )
+
+
+@router.get(
+    "/search-objects",
+    response_model=SearchObjectsResponse,
+    summary="多维对象查询（分类/维度/标签/official_only，V1.2 T33）",
+    responses=error_responses(*_READ_ERRORS),
+)
+async def search_objects(
+    principal: Annotated[Principal, Depends(require_tools_read())],
+    sess: DbSession,
+    object_type: Annotated[str | None, Query(max_length=64)] = None,
+    classification: Annotated[str | None, Query(max_length=128)] = None,
+    dimension: Annotated[str | None, Query(max_length=64)] = None,
+    tag: Annotated[str | None, Query(max_length=64)] = None,
+    official_only: Annotated[
+        bool,
+        Query(description="仅返回 OFFICIAL/ARCHIVED 对象（缺省 true）"),
+    ] = True,
+    limit: Annotated[int, Query(ge=1, le=tools_service.MAX_LIMIT)] = (
+        tools_service.DEFAULT_LIMIT
+    ),
+) -> SearchObjectsResponse:
+    """多维查询（V1.1 第四十六节）：禁止 Agent 自由 SQL，默认仅 OFFICIAL。"""
+    return await tools_service.search_objects(
+        sess,
+        principal.tenant_id,
+        object_type=object_type,
+        classification=classification,
+        dimension=dimension,
+        tag=tag,
+        official_only=official_only,
+        limit=limit,
+    )
