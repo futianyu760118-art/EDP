@@ -1,4 +1,4 @@
-.PHONY: backend-lint backend-test backend-isolation backend-migrate-check contract-export contract-gate frontend-lint frontend-test verify-all pipeline-full pipeline-incr reconcile seed-demo loadtest ops-report
+.PHONY: backend-lint backend-test backend-isolation backend-migrate-check contract-export contract-gate schema-gate frontend-lint frontend-test verify-all pipeline-full pipeline-incr reconcile seed-demo loadtest ops-report
 
 backend-lint:
 	cd backend && uv run ruff check . && uv run lint-imports
@@ -23,6 +23,10 @@ contract-export:
 contract-gate:
 	cd frontend && node scripts/check-contract-fingerprint.mjs
 
+# V1.2 T07：域契约包 JSON Schema 校验（contracts/**/*.schema.json）
+schema-gate:
+	cd backend && uv run --with jsonschema python scripts/validate_contract_schemas.py
+
 frontend-lint:
 	cd frontend && pnpm -r lint
 
@@ -33,7 +37,7 @@ frontend-test:
 	# 成为「文件过滤器」——参数实际未生效（W5 实测超时仍 15000ms）；改 exec 直跑确保生效。
 	cd frontend && pnpm --filter web exec vitest run --maxWorkers=2 --testTimeout=60000 && pnpm --filter @edp/api-sdk test && pnpm --filter @edp/shared test
 
-verify-all: backend-lint backend-test frontend-lint frontend-test backend-migrate-check contract-export contract-gate
+verify-all: backend-lint backend-test frontend-lint frontend-test backend-migrate-check contract-export contract-gate schema-gate
 
 pipeline-full:
 	cd backend && uv run python -m edp_api.modules.ingest.cli full

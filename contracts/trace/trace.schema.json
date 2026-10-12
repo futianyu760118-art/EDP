@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/trace/trace.schema.json",
+  "title": "Agent Trace 轨迹语义契约",
+  "description": "AEOS Agent 轨迹契约（V1.1 第十七节；对账导出自 EDP trace 模块 B.10 现状）。回答：谁调用了什么工具、读取了哪些事实、得到什么结果。",
+  "type": "object",
+  "required": ["trace_id", "agent_id", "started_at", "status"],
+  "properties": {
+    "trace_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "agent_id": { "type": "string" },
+    "task_id": { "type": ["string", "null"], "description": "API 对应 task_id（B.10）" },
+    "capability_id": { "type": ["string", "null"], "format": "uuid" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": ["string", "null"], "format": "date-time" },
+    "status": { "type": "string", "enum": ["RUNNING", "SUCCEEDED", "FAILED", "TIMEOUT", "ABORTED"] },
+    "input_context": { "type": ["object", "null"] },
+    "llm_prompt": { "type": ["string", "null"] },
+    "llm_response": { "type": ["string", "null"] },
+    "output_structured": { "type": ["object", "null"] },
+    "token_usage": { "type": ["object", "null"] },
+    "tool_calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tool_name", "timestamp"],
+        "properties": {
+          "tool_name": { "type": "string" },
+          "arguments": { "type": ["object", "null"] },
+          "authorization": { "type": ["string", "null"] },
+          "result": {},
+          "duration": { "type": ["number", "null"] },
+          "error": { "type": ["string", "null"] },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "description": "工具调用明细（B.10 tool_calls 表）"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" }
+    },
+    "result_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "轨迹产生的经营结果（V1.2 T18 新增列 result_refs）"
+    },
+    "error": { "type": ["object", "null"] }
+  },
+  "additionalProperties": true
+}

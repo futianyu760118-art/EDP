@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/value/value-ledger.schema.json",
+  "title": "Value Ledger 价值账本语义契约",
+  "description": "AEOS 价值账本基础版（V1.1 第十三节）：改善前后价值事实，支撑按结果收费与外部企业价值评定。",
+  "type": "object",
+  "required": ["value_id", "tenant_id", "created_at"],
+  "properties": {
+    "value_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "baseline_ref": { "type": ["string", "null"], "description": "改善前基线引用（如库存账龄报告/ERP 快照）" },
+    "initiative_ref": { "type": ["string", "null"], "description": "改善举措引用" },
+    "metric_ref": { "type": ["string", "null"], "description": "关联指标（Metric Registry metric_id/code）" },
+    "before_value": { "type": ["number", "null"], "description": "改善前值（如 8,500,000 库存）" },
+    "after_value": { "type": ["number", "null"], "description": "改善后值（如 6,900,000）" },
+    "delta": { "type": ["number", "null"], "description": "变化量（如释放资金 1,600,000）" },
+    "financial_value": { "type": ["number", "null"], "description": "财务价值折算" },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "证据引用（库存账龄报告/ERP 快照/财务确认）"
+    },
+    "verified_by": { "type": ["string", "null"] },
+    "verified_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": true
+}
