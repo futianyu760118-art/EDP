@@ -156,7 +156,7 @@ export function EvidencePage() {
     "h-8 px-2.5 border border-border rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:pointer-events-none";
 
   return (
-    <div className="space-y-4" data-dom-id="evidence-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="evidence-page">
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">证据库</h1>
         <div className="flex items-center gap-2">
@@ -246,9 +246,9 @@ export function EvidencePage() {
           />
         </div>
       ) : (
-        <section className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-4">
+        <section className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-4 flex-1 min-h-0 grid-rows-[repeat(2,minmax(0,1fr))] xl:grid-rows-1">
           <div
-            className="bg-card border border-border rounded-xl overflow-hidden"
+            className="bg-card border border-border rounded-xl overflow-hidden flex flex-col min-h-0"
             data-dom-id="evidence-content"
           >
             <EvidenceList
@@ -273,7 +273,7 @@ export function EvidencePage() {
               />
             ) : (
               <div
-                className="px-4 py-3 border-t border-border flex items-center justify-end gap-1"
+                className="px-4 py-3 border-t border-border flex items-center justify-end gap-1 shrink-0"
                 data-dom-id="evidence-pagination-fallback"
               >
                 <button

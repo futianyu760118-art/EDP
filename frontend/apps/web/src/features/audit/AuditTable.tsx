@@ -103,7 +103,7 @@ export function AuditTable({ filters, onFiltersChange }: AuditTableProps) {
     "h-8 px-2.5 border border-border rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:pointer-events-none";
 
   return (
-    <section className="space-y-4" data-dom-id="audit-logs-tab">
+    <section className="flex flex-col gap-4 flex-1 min-h-0" data-dom-id="audit-logs-tab">
       {/* 筛选工具栏（13.7 #2）：五参数与接口一一对应 */}
       <div className="bg-card border border-border rounded-xl p-3">
         <div className="flex flex-wrap items-center gap-3" data-dom-id="audit-filter-bar">
@@ -188,10 +188,10 @@ export function AuditTable({ filters, onFiltersChange }: AuditTableProps) {
         </div>
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="audit-content"
         >
-          <div className="overflow-x-auto" data-dom-id="audit-table">
+          <div className="table-scroll flex-1 min-h-0" data-dom-id="audit-table">
             <table className="w-full text-xs min-w-[900px]">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/50">
@@ -227,7 +227,7 @@ export function AuditTable({ filters, onFiltersChange }: AuditTableProps) {
             />
           ) : (
             <div
-              className="px-4 py-3 border-t border-border flex items-center justify-end gap-1"
+              className="px-4 py-3 border-t border-border flex items-center justify-end gap-1 shrink-0"
               data-dom-id="audit-pagination-fallback"
             >
               <button

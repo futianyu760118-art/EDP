@@ -45,7 +45,7 @@ export function EvidenceList({
   onVerify,
 }: EvidenceListProps) {
   return (
-    <ul className="divide-y divide-border" data-dom-id="evidence-list">
+    <ul className="divide-y divide-border flex-1 min-h-0 overflow-auto" data-dom-id="evidence-list">
       {items.map((record) => {
         const kind = evidenceKind(record);
         const state = verifyState[record.evidence_id] ?? "unverified";

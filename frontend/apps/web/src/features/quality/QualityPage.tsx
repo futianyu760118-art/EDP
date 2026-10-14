@@ -41,7 +41,7 @@ export function QualityPage() {
   const rest = pending != null ? Math.max(0, pending - exceptions.length) : 0;
 
   return (
-    <div className="space-y-4" data-dom-id="quality-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="quality-page">
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">数据质量</h1>
         <div className="flex items-center gap-2">
@@ -114,9 +114,9 @@ export function QualityPage() {
             />
           </section>
 
-          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4 flex-1 min-h-0 grid-rows-[repeat(2,minmax(0,1fr))] xl:grid-rows-1">
             <div
-              className="bg-card border border-border rounded-xl p-4"
+              className="bg-card border border-border rounded-xl p-4 min-h-0 overflow-auto"
               data-dom-id="quality-dimensions"
             >
               <h2 className="text-xs font-semibold text-foreground mb-3">
@@ -151,7 +151,7 @@ export function QualityPage() {
             </div>
 
             <div
-              className="bg-card border border-border rounded-xl p-4"
+              className="bg-card border border-border rounded-xl p-4 min-h-0 overflow-auto"
               data-dom-id="quality-exceptions"
             >
               <h2 className="text-xs font-semibold text-foreground mb-3">全部异常</h2>

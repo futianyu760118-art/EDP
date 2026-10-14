@@ -34,7 +34,7 @@ export function EventTable({
   onDetail?: (event: EventResponse) => void;
 }) {
   return (
-    <div className="overflow-x-auto" data-dom-id="events-table">
+    <div className="table-scroll flex-1 min-h-0" data-dom-id="events-table">
       <table className="w-full text-xs">
         <thead>
           <tr className="text-left text-muted-foreground border-b border-border">

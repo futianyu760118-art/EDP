@@ -78,7 +78,7 @@ export function CasesPage() {
     "h-8 px-2.5 border border-border rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:pointer-events-none";
 
   return (
-    <div className="space-y-4" data-dom-id="cases-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="cases-page">
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">闭环案例</h1>
       </section>
@@ -149,10 +149,10 @@ export function CasesPage() {
         </div>
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="cases-content"
         >
-          <div className="overflow-x-auto" data-dom-id="cases-table">
+            <div className="table-scroll flex-1 min-h-0" data-dom-id="cases-table">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
@@ -219,7 +219,7 @@ export function CasesPage() {
           ) : (
             /* total 缺失（真实契约 Page envelope 可选）降级：隐藏计数文案，保留游标导航 */
             <div
-              className="px-4 py-3 border-t border-border flex items-center justify-end gap-1"
+              className="px-4 py-3 border-t border-border flex items-center justify-end gap-1 shrink-0"
               data-dom-id="cases-pagination-fallback"
             >
               <button

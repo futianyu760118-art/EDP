@@ -101,7 +101,7 @@ export function MemoryPage() {
   const hasFilter = capability !== "" || status !== "";
 
   return (
-    <div className="space-y-4" data-dom-id="memory-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="memory-page">
       <section className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold text-foreground">候选记忆</h1>
         <p className="text-xs text-muted-foreground">
@@ -191,9 +191,10 @@ export function MemoryPage() {
         </div>
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="memory-content"
         >
+          <div className="table-scroll flex-1 min-h-0">
           <table className="w-full text-xs" data-dom-id="memory-table">
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
@@ -258,6 +259,7 @@ export function MemoryPage() {
               })}
             </tbody>
           </table>
+          </div>
           {total != null ? (
             <CursorPagination
               start={start}

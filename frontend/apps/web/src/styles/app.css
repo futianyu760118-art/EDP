@@ -30,12 +30,20 @@
   th { @apply whitespace-nowrap; }
 }
 
-/* critical-layout —— 原样拷贝自 `原型设计/pages/运营总览.html` 行 206~236 */
-.page-shell { display: flex; min-height: 100vh; }
+/* critical-layout —— 原型行 206~236 为基础，叠加视口锁定改造：
+   html/body 永不滚动（窗口无滚动条）；main-stage 高度锁 100vh 纵向 flex，
+   .page-content 为唯一内容滚动容器（flex 收缩 + min-height:0）——
+   页面根用 h-full flex 即可整页入屏，表格区固定高度表体内部滚。 */
+html, body { height: 100%; overflow: hidden; }
+.page-shell { display: flex; height: 100vh; overflow: hidden; }
 .sidebar { width: 250px; flex: 0 0 250px; }
 .topbar { height: 66px; }
-.main-stage { flex: 1 1 auto; margin-left: 250px; padding-top: 66px; }
-.page-content { padding: 24px; max-width: 1440px; }
+.main-stage { flex: 1 1 auto; margin-left: 250px; padding-top: 66px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.page-content { flex: 1 1 0%; min-height: 0; overflow-y: auto; padding: 24px; max-width: 1440px; }
+/* 表格滚动区（配 flex 布局：容器 flex-1 min-h-0）：纵横内部滚 + 表头吸顶；
+   th 实底 --edp-muted 防行内容透出，inset 阴影替代原 tr border-b。 */
+.table-scroll { overflow: auto; }
+.table-scroll thead th { position: sticky; top: 0; z-index: 1; background: var(--edp-muted); box-shadow: inset 0 -1px 0 var(--edp-border); }
 /* 侧边栏导航激活态 —— 拷贝自原型各页公共样式（.nav-item.active）；
    非激活态显式回正文色：antd reset（:where(...) a { color: colorLink }）会
    把菜单 <a> 涂成链接色，原型菜单为 <button> 无此问题，故此处补一行对齐 */

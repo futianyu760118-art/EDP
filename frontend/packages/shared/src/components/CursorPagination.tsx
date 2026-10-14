@@ -29,7 +29,7 @@ export function CursorPagination({
   const navButtonClass =
     "h-8 px-2.5 border border-border rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:pointer-events-none";
   return (
-    <div className="px-4 py-3 border-t border-border flex items-center justify-between">
+    <div className="px-4 py-3 border-t border-border flex items-center justify-between shrink-0">
       <div className="text-xs text-muted-foreground" data-dom-id="pagination-range">
         显示 {start}–{end} 条，共 {total} 条
       </div>

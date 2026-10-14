@@ -75,7 +75,7 @@ export function ActionsPage() {
   const hasFilter = status !== "" || owner.trim() !== "" || caseId !== "";
 
   return (
-    <div className="space-y-4" data-dom-id="actions-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="actions-page">
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">行动</h1>
       </section>
@@ -164,10 +164,10 @@ export function ActionsPage() {
         </div>
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="actions-content"
         >
-          <div className="overflow-x-auto" data-dom-id="actions-table">
+            <div className="table-scroll flex-1 min-h-0" data-dom-id="actions-table">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">

@@ -51,7 +51,7 @@ export function AdaptersPage() {
   };
 
   return (
-    <div className="space-y-4" data-dom-id="adapters-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="adapters-page">
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">适配器管理</h1>
         <div className="flex items-center gap-2">
@@ -102,8 +102,8 @@ export function AdaptersPage() {
           />
         </div>
       ) : (
-        <section className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
+        <section className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col">
+          <div className="table-scroll flex-1 min-h-0">
             <table className="w-full border-collapse min-w-[880px]" data-dom-id="adapters-table">
               <thead>
                 <tr className="bg-muted/50">

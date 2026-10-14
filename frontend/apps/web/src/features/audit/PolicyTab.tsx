@@ -74,7 +74,7 @@ export function PolicyTab({ createOpen, onCreateOpen, onCreateClose }: PolicyTab
   const activeCount = items.filter((p) => p.status === "ACTIVE").length;
 
   return (
-    <section className="space-y-4" data-dom-id="audit-policies-tab">
+    <section className="flex flex-col gap-4 flex-1 min-h-0" data-dom-id="audit-policies-tab">
       <div className="bg-card border border-border rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <select
@@ -126,10 +126,10 @@ export function PolicyTab({ createOpen, onCreateOpen, onCreateClose }: PolicyTab
         </div>
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="policy-table"
         >
-          <div className="overflow-x-auto">
+          <div className="table-scroll flex-1 min-h-0">
             <table className="w-full text-xs min-w-[860px]">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-muted/50">

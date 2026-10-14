@@ -23,7 +23,7 @@ export function ChainPanel({
   if (selected == null) {
     return (
       <div
-        className="bg-card border border-border rounded-xl p-8 text-center text-xs text-muted-foreground"
+        className="bg-card border border-border rounded-xl p-8 text-center text-xs text-muted-foreground min-h-0 overflow-auto"
         data-dom-id="evidence-chain-empty"
       >
         从左侧选择一份证据查看证据链
@@ -40,7 +40,7 @@ export function ChainPanel({
 
   return (
     <aside
-      className="bg-card border border-border rounded-xl overflow-hidden"
+      className="bg-card border border-border rounded-xl overflow-auto min-h-0"
       data-dom-id="evidence-chain"
     >
       <header className="px-4 py-3 border-b border-border flex items-center gap-2">

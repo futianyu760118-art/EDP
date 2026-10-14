@@ -30,7 +30,7 @@ export function AuditPage() {
   };
 
   return (
-    <div className="space-y-4" data-dom-id="audit-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="audit-page">
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">审计日志</h1>
         <div className="flex items-center gap-2">

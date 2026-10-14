@@ -55,7 +55,7 @@ export function TracesPage() {
   const hasFilter = capability !== "" || status !== "";
 
   return (
-    <div className="space-y-4" data-dom-id="traces-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="traces-page">
       <section className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold text-foreground">Trace 检索</h1>
         <p className="text-xs text-muted-foreground">
@@ -133,9 +133,10 @@ export function TracesPage() {
         </div>
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="traces-content"
         >
+          <div className="table-scroll flex-1 min-h-0">
           <table className="w-full text-xs" data-dom-id="traces-table">
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
@@ -175,6 +176,7 @@ export function TracesPage() {
               ))}
             </tbody>
           </table>
+          </div>
           {total != null ? (
             <CursorPagination
               start={start}
@@ -190,7 +192,7 @@ export function TracesPage() {
             />
           ) : (
             <div
-              className="px-4 py-3 border-t border-border flex items-center justify-end gap-1"
+              className="px-4 py-3 border-t border-border flex items-center justify-end gap-1 shrink-0"
               data-dom-id="traces-pagination-fallback"
             >
               <button

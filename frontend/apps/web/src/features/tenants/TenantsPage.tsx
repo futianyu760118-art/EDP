@@ -71,7 +71,7 @@ export function TenantsPage() {
   const navLocked = listQuery.isFetching;
 
   return (
-    <div className="space-y-4" data-dom-id="tenants-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="tenants-page">
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">租户管理</h1>
         <div className="flex items-center gap-2">
@@ -164,10 +164,10 @@ export function TenantsPage() {
         </div>
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="tenants-content"
         >
-          <div className="overflow-x-auto" data-dom-id="tenants-table">
+          <div className="table-scroll flex-1 min-h-0" data-dom-id="tenants-table">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">

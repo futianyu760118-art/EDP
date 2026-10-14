@@ -72,7 +72,7 @@ export function EventsPage() {
     "h-8 px-2.5 border border-border rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-50 disabled:pointer-events-none";
 
   return (
-    <div className="space-y-4" data-dom-id="events-page">
+    <div className="flex flex-col gap-4 h-full" data-dom-id="events-page">
       {/* 页头（原型行 336~350）：新建订阅占位；回放事件主按钮打开三步向导 */}
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">事件流</h1>
@@ -175,7 +175,7 @@ export function EventsPage() {
         </div>
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="events-content"
         >
           <EventTable
@@ -201,7 +201,7 @@ export function EventsPage() {
           ) : (
             /* total 缺失（真实契约未填充）降级：隐藏计数文案，保留游标导航 */
             <div
-              className="px-4 py-3 border-t border-border flex items-center justify-end gap-1"
+              className="px-4 py-3 border-t border-border flex items-center justify-end gap-1 shrink-0"
               data-dom-id="events-pagination-fallback"
             >
               <button

@@ -99,7 +99,8 @@ export function RegistryPage() {
     }`;
 
   return (
-    <div className="space-y-4" data-dom-id="objects-page">
+    <div       className="flex flex-col gap-4 h-full"
+      data-dom-id="objects-page">
       {/* 页头（原型`业务对象.html`行 331~346）：注册对象入口（T8 接新建弹窗） */}
       <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl font-semibold text-foreground">业务对象</h1>
@@ -231,12 +232,12 @@ export function RegistryPage() {
         />
       ) : (
         <section
-          className="bg-card border border-border rounded-xl overflow-hidden"
+          className="bg-card border border-border rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col"
           data-dom-id="objects-content"
         >
           {view === "cards" ? (
             <div
-              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4"
+              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 flex-1 min-h-0 overflow-auto"
               data-dom-id="objects-grid"
             >
               {filtered.map((o) => (
@@ -250,7 +251,7 @@ export function RegistryPage() {
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto" data-dom-id="objects-table">
+            <div className="table-scroll flex-1 min-h-0" data-dom-id="objects-table">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left text-muted-foreground border-b border-border">
