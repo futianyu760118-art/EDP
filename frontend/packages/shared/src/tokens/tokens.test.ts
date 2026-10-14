@@ -63,6 +63,8 @@ const lightMap: Record<string, string> = {
   colorTextSecondary: "--edp-muted-foreground",
   colorBorder: "--edp-border",
   colorBorderSecondary: "--edp-muted",
+  // 链接色 = 主色（防 antd 由 colorInfo 派生 colorLink 把 <a> reset 成 info 蓝）
+  colorLink: "--edp-primary",
 };
 
 describe("lightTokens ↔ tokens.css :root（改 CSS 必须同步此模块）", () => {

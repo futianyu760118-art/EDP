@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # 构建上下文必须为 backend/（uv workspace 根，需要根 pyproject.toml + uv.lock）
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder

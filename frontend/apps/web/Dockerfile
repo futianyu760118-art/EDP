@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # 构建上下文必须为 frontend/（pnpm workspace 根，需要根 package.json + pnpm-lock.yaml）
 
 FROM node:22-alpine AS builder

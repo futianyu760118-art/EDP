@@ -34,6 +34,9 @@ export const lightTokens = {
   colorWarning: "#d97706", // --edp-state-warning
   colorError: "#df4f5f", // --edp-state-error
   colorInfo: "#3b82f6", // --edp-state-info
+  /** 链接色 = 主色：antd 由 colorInfo 派生 colorLink，会把全局 <a> reset
+   *  成 info 蓝 #3b82f6（侧边栏菜单链接被涂蓝的根因）；原型链接即 text-primary。 */
+  colorLink: "#5b5ce2", // --edp-primary
 } as const;
 
 export const darkTokens = {
@@ -56,6 +59,7 @@ export const darkTokens = {
   colorWarning: "#d97706",
   colorError: "#df4f5f",
   colorInfo: "#3b82f6",
+  colorLink: "#7b7cf0", // --edp-primary (.dark)；同 lightTokens 注释：防 <a> reset 成 info 蓝
   /**
    * —— 派生 token 覆写（原型来源）——
    * 决策（T17 Concern #1 / T18 实跑对比落地）：ThemeProvider 不传 algorithm。

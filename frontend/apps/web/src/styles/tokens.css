@@ -76,15 +76,6 @@
 /* 基础类（原型行 190~205） */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-[data-icon] {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  background-color: currentColor;
-}
+/* 原型 [data-icon] mask 图标规则刻意不迁移：原型各页实际用 data-lucide（lucide UMD 替换），
+   无一元素带 data-icon；而 antd v5 的 SVG 图标（Modal 关闭 X / message 图标 / 表格排序等）
+   恰好带 data-icon 属性，此规则的 background-color:currentColor 会把它们涂成实心色块。 */

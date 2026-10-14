@@ -36,7 +36,10 @@
 .topbar { height: 66px; }
 .main-stage { flex: 1 1 auto; margin-left: 250px; padding-top: 66px; }
 .page-content { padding: 24px; max-width: 1440px; }
-/* 侧边栏导航激活态 —— 拷贝自原型各页公共样式（.nav-item.active） */
+/* 侧边栏导航激活态 —— 拷贝自原型各页公共样式（.nav-item.active）；
+   非激活态显式回正文色：antd reset（:where(...) a { color: colorLink }）会
+   把菜单 <a> 涂成链接色，原型菜单为 <button> 无此问题，故此处补一行对齐 */
+.nav-item { color: var(--edp-foreground); }
 .nav-item.active { background: var(--edp-primary-50); color: var(--edp-primary); }
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
