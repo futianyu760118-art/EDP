@@ -162,6 +162,10 @@
   前端适配器页「新增适配器」已带 接入方式（REST/DB_PULL）+ DSN + 表配置
   JSON；worker 主数据兜底每轮从 systems 表装配（缓存随 refresh_dynamic）。
   注意：DSN 含明文口令（dev 演练可接受；生产建议 secret 注入评审）。
+- **个人设置（V1.3 T51）**：PUT /auth/profile（display_name/email）+
+  POST /auth/change-password（旧密不匹配 400——会话内校验语义；强度：
+  ≥8 位含字母数字且异于旧密）；审计 AUTH_PROFILE_UPDATE /
+  AUTH_PASSWORD_CHANGE；前端 /profile 四卡（资料/改密/主题/会话权限）。
 - **位点事实来源 = PG**（realtime.stream_offsets；Kafka 不 commit）——
   消费重启用库内位点 seek；重置消费：删对应 (consumer_group, topic) 行。
 - **故障处置**：

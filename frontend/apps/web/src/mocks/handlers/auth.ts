@@ -48,6 +48,8 @@ export const authHandlers = [
     HttpResponse.json({
       user_id: mockUuid(2),
       username: "manager1",
+      display_name: "演示经理",
+      email: "manager1@edp.local",
       org_id: null,
       tenant_id: TENANT_ID,
       is_platform_admin: false,
@@ -55,6 +57,47 @@ export const authHandlers = [
       permissions: ["objects:read", "objects:write", "events:read", "evidence:read", "quality:read", "audit:read"],
     }),
   ),
+
+  // V1.3 PUT /auth/profile（个人设置）：回显更新后的 /me
+  http.put("*/api/v1/auth/profile", async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      display_name?: string | null;
+      email?: string | null;
+    };
+    return HttpResponse.json({
+      user_id: mockUuid(2),
+      username: "manager1",
+      display_name: body.display_name ?? "演示经理",
+      email: body.email ?? "manager1@edp.local",
+      org_id: null,
+      tenant_id: TENANT_ID,
+      is_platform_admin: false,
+      roles: ["MANAGER"],
+      permissions: ["objects:read", "objects:write", "events:read", "evidence:read", "quality:read", "audit:read"],
+    });
+  }),
+
+  // V1.3 POST /auth/change-password（个人设置）：旧密错 400 / 新密弱 400 / 成功 200
+  http.post("*/api/v1/auth/change-password", async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      old_password?: string;
+      new_password?: string;
+    };
+    if (body.old_password !== "Admin@123!") {
+      return HttpResponse.json(
+        { error: { code: "VALIDATION_ERROR", message: "旧密码不正确", request_id: "mock-request-id" } },
+        { status: 400 },
+      );
+    }
+    const pwd = body.new_password ?? "";
+    if (pwd.length < 8 || !/[A-Za-z]/.test(pwd) || !/\d/.test(pwd)) {
+      return HttpResponse.json(
+        { error: { code: "VALIDATION_ERROR", message: "新密码须同时包含字母与数字", request_id: "mock-request-id" } },
+        { status: 400 },
+      );
+    }
+    return HttpResponse.json({ message: "密码已更新" });
+  }),
 
   // B.1 POST /auth/refresh
   http.post("*/api/v1/auth/refresh", () =>

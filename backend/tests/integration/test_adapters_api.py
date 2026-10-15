@@ -463,7 +463,7 @@ async def test_list_adapters_analyst_200(client: httpx.AsyncClient) -> None:
         "plm-demo",
     ]
     erp = items[0]
-    assert set(erp) == {"adapter", "mode", "status", "health", "last_sync_at"}
+    assert set(erp) == {"adapter", "mode", "status", "health", "last_sync_at", "system_id"}
     assert erp["mode"] == "mock"
     assert erp["status"] == "空闲"  # 未同步过
     assert erp["health"] == "OK"

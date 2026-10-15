@@ -64,6 +64,7 @@
 | T48 | 验收与演练 | 延迟/幂等/对账实测报告 + 故障演练记录 | 订单/库存变更端到端延迟 P99 达标；0 重复落库；Kafka 中断恢复演练通过；源库负载不超标 | T47 | QA + MQ/CDC 运维 |
 | T49 | 供应链主数据真实拉取连接器（回执 SPC-V2-INT-EDP-01 触发，2026-10-15 增补） | `edp_adapters` SPC 拉取实现（直连 `150.158.13.110:15432`） | 10 张主数据表可拉取入库；**自定义增量列 `update_time`**（非 updated_at）；无时间列表（scm_process/scm_organization）走全量；敏感字段拉取时排除（scm_supplier 联系方式四列 / scm_customer.credit_code）；owner_domain 按 T42 清单映射 | T42 回执 + T46 | 连接器 |
 | T50 | 适配器前端可配置化（2026-10-15 增补，T49 泛化升级） | 迁移 0019 + DbPullAdapter + catalog CRUD + 动态注册表 + 前端弹窗字段 | 前端「新增适配器」真实可用：DB 拉取适配器零代码接入（DSN+表配置）；PUT/DELETE/test 探活；多租户 (tenant,name) 隔离 | T49 | 平台 + 前端 |
+| T51 | 个人设置 + 适配器编辑/删除 UI（2026-10-15 增补） | /auth/profile + /auth/change-password + ProfilePage + 适配器行编辑/删除 | 个人资料/改密/主题偏好/会话权限四卡可用；改密强度校验 + 审计；动态适配器可编辑（GET 预填→PUT）与危险确认删除 | T50 | 平台 + 前端 |
 
 **阶段验收：** 供应链订单/库存变更从源库 commit 到中台 RAW 可见，端到端可测、可对账、可恢复；主数据双轨对账偏差 0。
 
@@ -125,6 +126,7 @@
 | T48 | 完成（dev/CI 级） | 真实环境 P99/压测基线 | test_v13_realtime_e2e：真实 Kafka 容器全链（消费/DLQ/位点/幂等重放/断点续传不丢不重）；全量 770 passed；迁移升降级循环通过。真实 Debezium 链路（wal_level 快照→流式）待 T42 真实对端 + T43 真实部署后补验 |
 | T49 | 完成（dev/演练级） | spc_db 生产账号 | 通用化并入 T50；spc_test 实跑验证 |
 | T50 | 完成（dev/演练级） | 前端编辑/删除 UI 后续 | 适配器前端可配置化：迁移 0019（systems.adapter_config）+ 通用 DbPullAdapter（配置驱动，替换硬编码 SpcPullAdapter）+ catalog CRUD（POST/PUT/DELETE /systems + /test 探活）+ adapters_admin 动态注册表（(tenant,name) 键、RLS 隔离、静态 demo 回退）+ worker 主数据兜底 DB 装配；前端弹窗接入方式/DSN/表配置；契约导出+SDK 重生成+指纹绿；实跑：API 注册 spc → 清单 real/OK → 同步 → 测试连接 ok |
+| T51 | 完成 | - | 个人设置（PUT /auth/profile + POST /auth/change-password + MeResponse 扩 display_name/email + ProfilePage 四卡 + 路由/入口）+ 适配器编辑弹窗（GET 预填→PUT）与危险确认删除；后端 793 + 前端 264 全绿；实跑冒烟通过 |
 
 **执行基线（2026-10-14，分支 feat/v13-realtime）：** 后端 770 passed（725 基线 + 45 新增：单测 36 + 集成 9）；ruff / lint-imports 绿；schema-gate 14/14；alembic 0018 up/down/up 循环通过。**偏差记录：** ① realtimes.* 两表不启用 RLS（基础设施坐标，0018 docstring 裁定）；② Debezium Connector 本体不进 CI（消费侧以契约信封直注覆盖，Connector 由 dev compose/运维验证）；③ masterdata 兜底不落 ops.tasks 行（日志可观测，任务轨道后续评估）；④ stream 管道失败为头部阻塞重试（不丢不重优先，吞吐让位）。
 

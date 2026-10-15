@@ -107,9 +107,11 @@ _registry.register(DemoMesAdapter())
 
 # (tenant_id, name) → DbPullAdapter（进程内装配缓存；refresh 按租户替换）
 _dynamic: dict[tuple[UUID, str], DbPullAdapter] = {}
+# (tenant_id, name) → catalog systems 行 id（前端编辑/删除入口用）
+_dynamic_system_ids: dict[tuple[UUID, str], UUID] = {}
 
 _DYNAMIC_SQL = text("""
-    SELECT name, adapter_config FROM platform.systems
+    SELECT system_id, name, adapter_config FROM platform.systems
     WHERE status = 'ACTIVE' AND adapter_config IS NOT NULL
 """)
 
@@ -159,12 +161,18 @@ async def refresh_dynamic(sess: AsyncSession, tenant_id: UUID) -> None:
     rebuilt: dict[tuple[UUID, str], DbPullAdapter] = {
         key: adapter for key, adapter in _dynamic.items() if key[0] != tenant_id
     }
+    rebuilt_ids: dict[tuple[UUID, str], UUID] = {
+        key: sid for key, sid in _dynamic_system_ids.items() if key[0] != tenant_id
+    }
     for row in rows:
         adapter = build_adapter_from_config(row["name"], row["adapter_config"])
         if adapter is not None:
             rebuilt[(tenant_id, row["name"])] = adapter
+            rebuilt_ids[(tenant_id, row["name"])] = row["system_id"]
     _dynamic.clear()
     _dynamic.update(rebuilt)
+    _dynamic_system_ids.clear()
+    _dynamic_system_ids.update(rebuilt_ids)
 
 
 def get_adapter(tenant_id: UUID, adapter_name: str) -> SourceAdapter:
@@ -498,6 +506,7 @@ async def list_adapters(
                 status=status,
                 health=await probe_health(adapter),
                 last_sync_at=watermark,
+                system_id=_dynamic_system_ids.get((tenant_id, name)),
             )
         )
     return items

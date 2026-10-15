@@ -83,6 +83,8 @@ export interface EdpClient {
   request<T>(path: string, init?: RequestOptions): Promise<T>;
   get<T>(path: string, init?: RequestOptions): Promise<T>;
   post<T>(path: string, body?: unknown, init?: RequestOptions): Promise<T>;
+  put<T>(path: string, body?: unknown, init?: RequestOptions): Promise<T>;
+  delete<T>(path: string, init?: RequestOptions): Promise<T>;
   login(username: string, password: string, tenantSlug?: string): Promise<TokenResponse>;
   refresh(): Promise<RefreshResponse>;
   me(): Promise<MeResponse>;
@@ -261,6 +263,10 @@ export function createClient(options: EdpClientOptions): EdpClient {
     get: <T>(path: string, init: RequestOptions = {}) => request<T>(path, { ...init, method: "GET" }),
     post: <T>(path: string, body?: unknown, init: RequestOptions = {}) =>
       request<T>(path, { ...init, method: "POST", body }),
+    put: <T>(path: string, body?: unknown, init: RequestOptions = {}) =>
+      request<T>(path, { ...init, method: "PUT", body }),
+    delete: <T>(path: string, init: RequestOptions = {}) =>
+      request<T>(path, { ...init, method: "DELETE" }),
     login: (username: string, password: string, tenantSlug?: string) =>
       request<TokenResponse>("/api/v1/auth/login", {
         method: "POST",

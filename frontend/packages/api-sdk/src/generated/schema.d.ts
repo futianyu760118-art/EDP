@@ -417,6 +417,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 修改当前用户密码
+         * @description 旧密校验（401）→ 强度校验（400）→ Argon2id 重哈希 + 审计。
+         */
+        post: operations["change_password_api_v1_auth_change_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -444,9 +464,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 获取当前用户信息与权限清单 */
+        /**
+         * 获取当前用户信息与权限清单
+         * @description 当前用户信息（含 display_name/email + 角色权限清单）。
+         */
         get: operations["me_api_v1_auth_me_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * 更新个人资料（display_name / email）
+         * @description 局部更新 + 审计 AUTH_PROFILE_UPDATE；返回更新后的 /me。
+         */
+        put: operations["update_profile_api_v1_auth_profile_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2239,6 +2282,9 @@ export interface components {
         /**
          * AdapterListItem
          * @description GET /admin/adapters 清单行（status/health 文案对齐 13.6 数据故事）。
+         *
+         *     system_id（T50）：动态（DB 装配）适配器的 catalog 注册行 id——前端
+         *     编辑/删除入口；静态 demo 适配器为 None。
          */
         AdapterListItem: {
             /** Adapter */
@@ -2251,6 +2297,8 @@ export interface components {
             mode: string;
             /** Status */
             status: string;
+            /** System Id */
+            system_id?: string | null;
         };
         /**
          * AdapterListResponse
@@ -2839,6 +2887,21 @@ export interface components {
             step_type: "EVENT" | "CASE_CREATED" | "DECISION" | "ACTION";
             /** Title */
             title: string;
+        };
+        /**
+         * ChangePasswordRequest
+         * @description POST /auth/change-password（个人设置改密）。
+         */
+        ChangePasswordRequest: {
+            /** New Password */
+            new_password: string;
+            /** Old Password */
+            old_password: string;
+        };
+        /** ChangePasswordResponse */
+        ChangePasswordResponse: {
+            /** Message */
+            message: string;
         };
         /**
          * ChecksumSampling
@@ -3875,6 +3938,10 @@ export interface components {
         };
         /** MeResponse */
         MeResponse: {
+            /** Display Name */
+            display_name: string;
+            /** Email */
+            email: string;
             /** Is Platform Admin */
             is_platform_admin: boolean;
             /** Org Id */
@@ -4706,6 +4773,16 @@ export interface components {
             resource_types?: string[] | null;
             /** Status */
             status?: ("ACTIVE" | "DISABLED") | null;
+        };
+        /**
+         * ProfileUpdateRequest
+         * @description PUT /auth/profile（个人设置：仅传入字段更新）。
+         */
+        ProfileUpdateRequest: {
+            /** Display Name */
+            display_name?: string | null;
+            /** Email */
+            email?: string | null;
         };
         /**
          * PurchaseOrderItem
@@ -7567,6 +7644,57 @@ export interface operations {
             };
         };
     };
+    change_password_api_v1_auth_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_api_v1_auth_login_post: {
         parameters: {
             query?: never;
@@ -7643,6 +7771,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    update_profile_api_v1_auth_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

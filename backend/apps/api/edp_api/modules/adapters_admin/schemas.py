@@ -75,13 +75,18 @@ class AdapterJobsResponse(BaseModel):
 
 
 class AdapterListItem(BaseModel):
-    """GET /admin/adapters 清单行（status/health 文案对齐 13.6 数据故事）。"""
+    """GET /admin/adapters 清单行（status/health 文案对齐 13.6 数据故事）。
+
+    system_id（T50）：动态（DB 装配）适配器的 catalog 注册行 id——前端
+    编辑/删除入口；静态 demo 适配器为 None。
+    """
 
     adapter: str
     mode: str
     status: str
     health: str
     last_sync_at: datetime | None = None
+    system_id: UUID | None = None
 
 
 class AdapterListResponse(BaseModel):

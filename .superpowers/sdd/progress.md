@@ -516,3 +516,22 @@ POST /systems/{id}/test {ok:true} → worker 兜底 DB 装配同步。
 5. DSN 明文存 adapter_config（dev 演练可接受；生产 secret 注入评审记为后续项）；
 6. 前端删除/编辑 UI 未做（后端 DELETE/PUT 已备 + 集成测试覆盖）——记后续前端项；
 7. 旧的 spc 水位 systems 行与 catalog 注册同名冲突——PUT 复用该行（迁移兼容路径：老行 adapter_config 为空时 PUT 注入配置即升级为 real）。
+
+---
+
+# SDD Progress Ledger — EDP V1.3 个人设置 + 适配器编辑/删除（T50 前端收口 + T51）
+
+Branch: feat/v13-realtime（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T51 个人设置 | DONE | platform PUT /auth/profile + POST /auth/change-password + MeResponse 扩 display_name/email + features/profile（ProfilePage 四卡：资料/改密/主题/会话权限）+ 路由 /profile + Topbar/Sidebar 入口 | 改密强度（≥8 位字母+数字，不同于旧密）；审计 AUTH_PROFILE_UPDATE/AUTH_PASSWORD_CHANGE；改密旧密错误定为 400（会话内输入校验，避免触发客户端 401 会话失效登出）；MSW 三 handler + 5 前端测试 |
+| 适配器编辑/删除 | DONE | AdapterListItem.system_id + EditAdapterModal（GET 预填→PUT）+ 删除危险确认（DELETE）+ MSW GET/PUT/DELETE /systems/{id} + 清单追加动态行 | 前端 2 测试；编辑仅对动态（mode=real）行展示 |
+
+验证：backend 全量 **793 passed**（+5）；frontend web **264 passed**（+7：Profile 5 + Adapters 2）、api-sdk 22、shared 98、lint 0 error、build 绿；契约 4e46409a + 指纹门禁绿；实跑冒烟（/me 30 权限、profile 更新、改密+还原）通过；dev 栈重建健康。
+
+关键裁定（记入偏差）：
+1. 改密旧密不匹配 = 400 VALIDATION_ERROR（非 401）——401 会走客户端 refresh/会话失效链导致登出（前端实测踩坑，MSW+集成测试双锁）；
+2. platform.User/APIKey 的 tenant_id/org_id 声明了 ForeignKey（违反 ORM 不声明 FK 约定）——首次 users UPDATE flush 触发全局 mapper 配置 NoReferencedTableError（platform metadata 无 tenants/organizations 表）；已移除三处 FK 声明；
+3. auth 路由依赖顺序：get_principal 需要 get_db 先挂（sess 参数须在 principal 依赖之前）——_require_jwt_user 守卫抽公共后三端点参数顺序统一 sess 前置；
+4. 个人设置主题偏好复用 zustand persisted theme-store（不重复建设）。

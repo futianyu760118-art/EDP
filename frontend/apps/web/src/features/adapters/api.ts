@@ -11,6 +11,9 @@ export type AdapterJobItem = Schemas["AdapterJobItem"];
 export type AdapterJobsResponse = Schemas["AdapterJobsResponse"];
 export type SystemCreateRequest = Schemas["SystemCreateRequest"];
 export type SystemCreatedResponse = Schemas["SystemCreatedResponse"];
+export type SystemResponse = Schemas["SystemResponse"];
+export type SystemUpdateRequest = Schemas["SystemUpdateRequest"];
+export type SystemTestResponse = Schemas["SystemTestResponse"];
 export type SyncStats = Schemas["SyncStats"];
 
 /**
@@ -72,4 +75,20 @@ export const adaptersApi = {
   /** B.7 POST /systems（新增适配器注册）→ 201；同名 409。 */
   createSystem: (body: SystemCreateRequest): Promise<SystemCreatedResponse> =>
     apiClient.post<SystemCreatedResponse>(`${BASE}/systems`, body),
+
+  /** T50 GET /systems/{id}：系统详情（编辑弹窗预填）。 */
+  getSystem: (systemId: string): Promise<SystemResponse> =>
+    apiClient.get<SystemResponse>(`${BASE}/systems/${encodeURIComponent(systemId)}`),
+
+  /** T50 PUT /systems/{id}：局部更新（adapter_config 变更同步装配）。 */
+  updateSystem: (systemId: string, body: SystemUpdateRequest): Promise<SystemResponse> =>
+    apiClient.put<SystemResponse>(`${BASE}/systems/${encodeURIComponent(systemId)}`, body),
+
+  /** T50 DELETE /systems/{id} → 204。 */
+  deleteSystem: (systemId: string): Promise<void> =>
+    apiClient.delete<void>(`${BASE}/systems/${encodeURIComponent(systemId)}`),
+
+  /** T50 POST /systems/{id}/test：驱动配置探活。 */
+  testSystem: (systemId: string): Promise<SystemTestResponse> =>
+    apiClient.post<SystemTestResponse>(`${BASE}/systems/${encodeURIComponent(systemId)}/test`, {}),
 };

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { adaptersApi, type SystemCreateRequest } from "./api";
+import { adaptersApi, type SystemCreateRequest, type SystemUpdateRequest } from "./api";
 
 /** 适配器清单（7 列表格 + 测试连接下拉共用）。 */
 export function useAdapters() {
@@ -40,6 +40,38 @@ export function useCreateSystem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: SystemCreateRequest) => adaptersApi.createSystem(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["adapters", "list"] });
+    },
+  });
+}
+
+/** T50 系统详情（编辑弹窗预填；systemId 为空禁用）。 */
+export function useSystem(systemId: string | undefined) {
+  return useQuery({
+    queryKey: ["systems", "detail", systemId],
+    queryFn: () => adaptersApi.getSystem(systemId!),
+    enabled: systemId != null && systemId !== "",
+  });
+}
+
+/** T50 更新系统（PUT /systems/{id}）：成功刷新详情与清单。 */
+export function useUpdateSystem(systemId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SystemUpdateRequest) => adaptersApi.updateSystem(systemId!, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["adapters", "list"] });
+      void queryClient.invalidateQueries({ queryKey: ["systems", "detail", systemId] });
+    },
+  });
+}
+
+/** T50 删除系统（DELETE /systems/{id}）：成功刷新清单。 */
+export function useDeleteSystem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (systemId: string) => adaptersApi.deleteSystem(systemId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["adapters", "list"] });
     },

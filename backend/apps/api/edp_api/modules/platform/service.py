@@ -23,13 +23,20 @@ from edp_api.core.security.jwt import (
     create_refresh_token,
     decode_token,
 )
-from edp_api.core.security.password import timing_dummy_verify, verify_password
+from edp_api.core.security.password import (
+    hash_password,
+    timing_dummy_verify,
+    verify_password,
+)
 from edp_api.core.security.principal import Principal
 from edp_api.core.security.rbac import permission_codes
+from edp_api.modules.audit import service as audit_service
 from edp_api.modules.platform.models import IdempotencyKey, User
 from edp_api.modules.platform.schemas import (
+    ChangePasswordRequest,
     LoginRequest,
     MeResponse,
+    ProfileUpdateRequest,
     RefreshResponse,
     TenantInfo,
     TokenResponse,
@@ -165,11 +172,98 @@ async def build_me_response(sess: AsyncSession, principal: Principal) -> MeRespo
     return MeResponse(
         user_id=user.user_id,
         username=user.username,
+        display_name=user.display_name,
+        email=user.email,
         org_id=user.org_id,
         tenant_id=principal.tenant_id,
         is_platform_admin=principal.is_platform_admin,
         roles=principal.roles,
         permissions=sorted(permission_codes(principal)),
+    )
+
+
+# ---- 个人设置（V1.3）：资料更新 / 改密 ----
+
+
+async def update_profile(
+    sess: AsyncSession, principal: Principal, req: ProfileUpdateRequest
+) -> MeResponse:
+    """个人资料局部更新（display_name / email）；审计 AUTH_PROFILE_UPDATE。"""
+    if principal.user_id is None:
+        raise EdpError.unauthenticated("access token 主体无效")
+    await bind_tenant(sess, principal.tenant_id)
+    user = await get_user_by_id(sess, principal.user_id)
+    if user is None:
+        raise EdpError.unauthenticated("用户不存在")
+
+    changed: dict[str, str] = {}
+    if "display_name" in req.model_fields_set and req.display_name:
+        changed["display_name"] = req.display_name
+        user.display_name = req.display_name
+    if "email" in req.model_fields_set and req.email:
+        changed["email"] = req.email
+        user.email = req.email
+    if changed:
+        user.updated_by = principal.id or str(principal.user_id)
+        user.updated_at = datetime.now(UTC)
+        await sess.flush()
+        await audit_service.record_explicit(
+            sess,
+            action="AUTH_PROFILE_UPDATE",
+            resource_type="users",
+            resource_id=str(user.user_id),
+            detail={"changed_fields": list(changed)},
+            principal=principal,
+        )
+    return await build_me_response(sess, principal)
+
+
+_PASSWORD_MIN_LENGTH = 8
+
+
+def _password_strength_error(new_password: str, old_password: str) -> str | None:
+    """新密码强度校验：≥8 位 + 含字母与数字 + 不同于旧密码。"""
+    if len(new_password) < _PASSWORD_MIN_LENGTH:
+        return f"新密码至少 {_PASSWORD_MIN_LENGTH} 位"
+    has_letter = any(c.isalpha() for c in new_password)
+    has_digit = any(c.isdigit() for c in new_password)
+    if not (has_letter and has_digit):
+        return "新密码须同时包含字母与数字"
+    if new_password == old_password:
+        return "新密码不能与旧密码相同"
+    return None
+
+
+async def change_password(
+    sess: AsyncSession, principal: Principal, req: ChangePasswordRequest
+) -> None:
+    """改密：旧密校验（不匹配 400——会话内输入校验语义，不触发客户端
+    401 会话失效流程）→ 强度校验（400）→ Argon2id 重哈希；
+    审计 AUTH_PASSWORD_CHANGE（不含任何口令值）。"""
+    if principal.user_id is None:
+        raise EdpError.unauthenticated("access token 主体无效")
+    await bind_tenant(sess, principal.tenant_id)
+    user = await get_user_by_id(sess, principal.user_id)
+    if user is None:
+        raise EdpError.unauthenticated("用户不存在")
+    if not verify_password(req.old_password, user.password_hash):
+        raise EdpError.validation_error("旧密码不正确")
+
+    error = _password_strength_error(req.new_password, req.old_password)
+    if error is not None:
+        raise EdpError.validation_error(error)
+
+    user.password_hash = hash_password(req.new_password)
+    user.updated_by = principal.id or str(principal.user_id)
+    user.updated_at = datetime.now(UTC)
+    await sess.flush()
+    await audit_service.record_explicit(
+        sess,
+        action="AUTH_PASSWORD_CHANGE",
+        resource_type="users",
+        resource_id=str(user.user_id),
+        detail={"via": "profile_settings"},
+        principal=principal,
     )
 
 

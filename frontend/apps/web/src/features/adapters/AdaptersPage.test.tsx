@@ -45,6 +45,9 @@ function renderAdapters() {
 
 const $ = (id: string) => document.querySelector(`[data-dom-id="${id}"]`) as HTMLElement;
 const btn = (id: string) => $(id) as HTMLButtonElement;
+const input = (id: string) => $(id) as HTMLInputElement;
+const select = (id: string) => $(id) as HTMLSelectElement;
+const textarea = (id: string) => $(id) as HTMLTextAreaElement;
 const rows = () => document.querySelectorAll('[data-dom-id^="adapter-row-"]');
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -361,6 +364,56 @@ describe("AdaptersPage 适配器管理（MSW 模式渲染路由）", () => {
     const before = listCalls;
     fireEvent.click(btn("adapters-refresh"));
     await waitFor(() => expect(listCalls).toBeGreaterThan(before));
+  });
+
+  it("T50 编辑：注册系统 → 行出现编辑按钮 → 弹窗预填 → 保存 PUT → 关闭", async () => {
+    renderAdapters();
+    await waitFor(() => expect(rows().length).toBe(5));
+
+    // 注册（新增弹窗：DB_PULL 通道 + DSN + 表配置）
+    fireEvent.click(btn("adapter-add"));
+    await waitFor(() => expect($("adapter-create-form")).not.toBeNull());
+    fireEvent.change(input("adapter-name"), { target: { value: "spc-edit" } });
+    fireEvent.change(select("adapter-channel"), { target: { value: "DB_PULL" } });
+    fireEvent.change(input("adapter-dsn"), { target: { value: "postgresql://u:p@h:5432/db" } });
+    fireEvent.change(textarea("adapter-tables-json"), {
+      target: { value: '[{"table":"scm_material","increment_column":"update_time"}]' },
+    });
+    fireEvent.click(btn("modal-form-submit"));
+    await waitFor(() => expect($("adapter-edit-spc-edit")).not.toBeNull());
+
+    // 打开编辑弹窗 → 预填（名称只读 + DSN 回显）
+    fireEvent.click(btn("adapter-edit-spc-edit"));
+    await waitFor(() => expect($("adapter-edit-form")).not.toBeNull());
+    await waitFor(() => expect(input("adapter-edit-name").value).toBe("spc-edit"));
+    expect(input("adapter-edit-dsn").value).toContain("postgresql://");
+    expect(textarea("adapter-edit-tables-json").value).toContain("scm_material");
+
+    // 修改 DSN → 保存 → 弹窗关闭
+    fireEvent.change(input("adapter-edit-dsn"), { target: { value: "postgresql://u:p@h:5432/db2" } });
+    fireEvent.click(btn("modal-form-submit"));
+    await waitFor(() => expect($("adapter-edit-form")).toBeNull());
+  });
+
+  it("T50 删除：危险确认 → DELETE → 行移除", async () => {
+    renderAdapters();
+    await waitFor(() => expect(rows().length).toBe(5));
+
+    fireEvent.click(btn("adapter-add"));
+    await waitFor(() => expect($("adapter-create-form")).not.toBeNull());
+    fireEvent.change(input("adapter-name"), { target: { value: "spc-del" } });
+    fireEvent.change(select("adapter-channel"), { target: { value: "DB_PULL" } });
+    fireEvent.change(input("adapter-dsn"), { target: { value: "postgresql://u:p@h:5432/db" } });
+    fireEvent.change(textarea("adapter-tables-json"), {
+      target: { value: '[{"table":"scm_material"}]' },
+    });
+    fireEvent.click(btn("modal-form-submit"));
+    await waitFor(() => expect($("adapter-delete-spc-del")).not.toBeNull());
+
+    fireEvent.click(btn("adapter-delete-spc-del"));
+    await waitFor(() => expect(btn("danger-confirm")).toBeTruthy());
+    fireEvent.click(btn("danger-confirm"));
+    await waitFor(() => expect($("adapter-row-spc-del")).toBeNull());
   });
 
   // EDP-601 空态收口：空清单 → 三件套 + 语境动作（新增适配器/数据源连接向导）

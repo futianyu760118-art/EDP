@@ -95,7 +95,7 @@ export function Topbar() {
             ],
             onClick: ({ key }) => {
               if (key === "profile") {
-                message.info("个人设置建设中");
+                void navigate("/profile");
               } else if (key === "logout") {
                 handleLogout();
               }

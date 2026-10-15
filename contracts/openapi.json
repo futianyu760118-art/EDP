@@ -503,7 +503,7 @@
         "type": "object"
       },
       "AdapterListItem": {
-        "description": "GET /admin/adapters 清单行（status/health 文案对齐 13.6 数据故事）。",
+        "description": "GET /admin/adapters 清单行（status/health 文案对齐 13.6 数据故事）。\n\nsystem_id（T50）：动态（DB 装配）适配器的 catalog 注册行 id——前端\n编辑/删除入口；静态 demo 适配器为 None。",
         "properties": {
           "adapter": {
             "title": "Adapter",
@@ -532,6 +532,18 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "system_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System Id"
           }
         },
         "required": [
@@ -1957,6 +1969,42 @@
           "title"
         ],
         "title": "CaseStepItem",
+        "type": "object"
+      },
+      "ChangePasswordRequest": {
+        "description": "POST /auth/change-password（个人设置改密）。",
+        "properties": {
+          "new_password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          },
+          "old_password": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Old Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "old_password",
+          "new_password"
+        ],
+        "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "ChangePasswordResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChangePasswordResponse",
         "type": "object"
       },
       "ChecksumSampling": {
@@ -4426,6 +4474,14 @@
       },
       "MeResponse": {
         "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
           "is_platform_admin": {
             "title": "Is Platform Admin",
             "type": "boolean"
@@ -4474,6 +4530,8 @@
         "required": [
           "user_id",
           "username",
+          "display_name",
+          "email",
           "org_id",
           "tenant_id",
           "is_platform_admin",
@@ -6997,6 +7055,39 @@
           }
         },
         "title": "PolicyUpdateRequest",
+        "type": "object"
+      },
+      "ProfileUpdateRequest": {
+        "description": "PUT /auth/profile（个人设置：仅传入字段更新）。",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "title": "ProfileUpdateRequest",
         "type": "object"
       },
       "PurchaseOrderItem": {
@@ -12438,6 +12529,68 @@
         ]
       }
     },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "description": "旧密校验（401）→ 强度校验（400）→ Argon2id 重哈希 + 审计。",
+        "operationId": "change_password_api_v1_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePasswordResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR：参数缺失或格式错误"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "UNAUTHENTICATED：未认证或凭据无效"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "修改当前用户密码",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "description": "登录（凭据校验/时序硬化/签发归 service.authenticate_and_login）。",
@@ -12502,6 +12655,7 @@
     },
     "/api/v1/auth/me": {
       "get": {
+        "description": "当前用户信息（含 display_name/email + 角色权限清单）。",
         "operationId": "me_api_v1_auth_me_get",
         "responses": {
           "200": {
@@ -12526,6 +12680,68 @@
           }
         },
         "summary": "获取当前用户信息与权限清单",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/profile": {
+      "put": {
+        "description": "局部更新 + 审计 AUTH_PROFILE_UPDATE；返回更新后的 /me。",
+        "operationId": "update_profile_api_v1_auth_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR：参数缺失或格式错误"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "UNAUTHENTICATED：未认证或凭据无效"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "更新个人资料（display_name / email）",
         "tags": [
           "auth"
         ]

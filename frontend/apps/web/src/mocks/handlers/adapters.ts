@@ -7,8 +7,19 @@ import { daysBefore, iso, minutesBefore } from "../lib/demo-time";
 
 const SYNC_MODES = new Set(["incremental", "full", "replay"]);
 
-/** 会话内已注册系统名（POST /systems 409 判重；不含 /admin/adapters 固定清单）。 */
-const registeredSystems = new Set<string>();
+/** 会话内已注册系统（POST /systems 写入；T50 GET/PUT/DELETE 详情/更新/删除）。 */
+interface MockSystem {
+  system_id: string;
+  name: string;
+  type: string;
+  endpoint?: string;
+  auth_config?: Record<string, unknown>;
+  adapter_config?: Record<string, unknown> | null;
+  status: string;
+  created_at: string;
+}
+
+const registeredSystems = new Map<string, MockSystem>();
 
 /** 会话内同步任务（POST sync 登记；status/jobs 轮询各自计数推进 RUNNING → 终态）。 */
 const syncJobs = new Map<string, { sync_id: string; statusPolled: boolean; jobsPolled: boolean }>();
@@ -78,10 +89,23 @@ interface AdapterJobRow {
 
 export const adapterHandlers = [
   // B.12 GET /admin/adapters：全部适配器清单与运行状态
+  // （T50：追加会话内注册的系统行——mode=real + system_id，编辑/删除入口可用）
   http.get("*/api/v1/admin/adapters", ({ request }) => {
     const scenario = scenarioResponse(request);
     if (scenario) return scenario;
-    return HttpResponse.json({ items: adapters, next_cursor: null, total: adapters.length });
+    const dynamicRows = [...registeredSystems.values()].map((s) => ({
+      adapter: s.name,
+      mode: s.adapter_config ? "real" : "mock",
+      status: "空闲",
+      health: "OK",
+      last_sync_at: null,
+      system_id: s.system_id,
+    }));
+    return HttpResponse.json({
+      items: [...adapters, ...dynamicRows],
+      next_cursor: null,
+      total: adapters.length + dynamicRows.length,
+    });
   }),
 
   // T5 GET /admin/adapters/{name}/jobs：任务历史（ops.tasks 简投影；会话内触发的 sync 置顶）
@@ -156,7 +180,13 @@ export const adapterHandlers = [
   http.post("*/api/v1/systems", async ({ request }) => {
     const scenario = scenarioResponse(request);
     if (scenario) return scenario;
-    const body = (await request.json().catch(() => ({}))) as { name?: string; type?: string };
+    const body = (await request.json().catch(() => ({}))) as {
+      name?: string;
+      type?: string;
+      endpoint?: string;
+      auth_config?: Record<string, unknown>;
+      adapter_config?: Record<string, unknown>;
+    };
     const name = (body.name ?? "").trim();
     if (!name || !body.type) {
       return errorOf("VALIDATION_ERROR", "name/type 必填", 400);
@@ -164,15 +194,78 @@ export const adapterHandlers = [
     if (registeredSystems.has(name) || adapters.some((a) => a.adapter === name)) {
       return errorOf("CONFLICT", "适配器名称已存在", 409);
     }
-    registeredSystems.add(name);
+    const system: MockSystem = {
+      system_id: mockUuid(960 + registeredSystems.size),
+      name,
+      type: body.type,
+      endpoint: body.endpoint,
+      auth_config: body.auth_config,
+      adapter_config: body.adapter_config ?? null,
+      status: "ACTIVE",
+      created_at: iso("2026-09-28T08:30:00Z"),
+    };
+    registeredSystems.set(name, system);
     return HttpResponse.json(
       {
-        system_id: mockUuid(960 + registeredSystems.size),
+        system_id: system.system_id,
         name,
         status: "ACTIVE",
-        created_at: iso("2026-09-28T08:30:00Z"),
+        created_at: system.created_at,
       },
       { status: 201 },
     );
+  }),
+
+  // T50 GET /systems/{id}：详情（编辑弹窗预填）
+  http.get("*/api/v1/systems/:systemId", ({ request, params }) => {
+    const scenario = scenarioResponse(request);
+    if (scenario) return scenario;
+    const found = [...registeredSystems.values()].find(
+      (s) => s.system_id === String(params.systemId),
+    );
+    if (!found) return errorOf("NOT_FOUND", "系统不存在", 404);
+    return HttpResponse.json({
+      ...found,
+      adapter_mode: found.adapter_config ? "real" : "mock",
+      updated_at: iso("2026-09-28T08:30:00Z"),
+    });
+  }),
+
+  // T50 PUT /systems/{id}：局部更新（adapter_config 变更同步装配）
+  http.put("*/api/v1/systems/:systemId", async ({ params, request }) => {
+    const body = (await request.json().catch(() => ({}))) as MockSystem;
+    const found = [...registeredSystems.values()].find(
+      (s) => s.system_id === String(params.systemId),
+    );
+    if (!found) return errorOf("NOT_FOUND", "系统不存在", 404);
+    if (body.type !== undefined) found.type = body.type;
+    if (body.endpoint !== undefined) found.endpoint = body.endpoint;
+    if (body.auth_config !== undefined) found.auth_config = body.auth_config;
+    if (body.adapter_config !== undefined) found.adapter_config = body.adapter_config;
+    return HttpResponse.json({
+      ...found,
+      adapter_mode: found.adapter_config ? "real" : "mock",
+      updated_at: iso("2026-09-28T08:30:00Z"),
+    });
+  }),
+
+  // T50 DELETE /systems/{id} → 204
+  http.delete("*/api/v1/systems/:systemId", ({ params }) => {
+    const found = [...registeredSystems.entries()].find(
+      ([, s]) => s.system_id === String(params.systemId),
+    );
+    if (!found) return errorOf("NOT_FOUND", "系统不存在", 404);
+    registeredSystems.delete(found[0]);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // T50 POST /systems/{id}/test：驱动配置探活
+  http.post("*/api/v1/systems/:systemId/test", ({ params }) => {
+    const found = [...registeredSystems.values()].find(
+      (s) => s.system_id === String(params.systemId),
+    );
+    if (!found) return errorOf("NOT_FOUND", "系统不存在", 404);
+    if (!found.adapter_config) return errorOf("VALIDATION_ERROR", "该系统无驱动配置（adapter_config）", 400);
+    return HttpResponse.json({ ok: true, detail: "db pull ready" });
   }),
 ];
