@@ -19,7 +19,9 @@ CREATE TABLE IF NOT EXISTS inventory (
 );
 
 -- CDC 只读账号（密码 dev 专用；真实环境由 DBA 最小化授权）
-CREATE ROLE scm_cdc LOGIN PASSWORD 'scm_cdc_dev';
+-- REPLICATION 属性：pgoutput 物理复制连接必需（WAL sender）——只读语义
+-- 指业务表无写权限，逻辑复制属性单独授予（V1.3 风险表第一项的 dev 落点）
+CREATE ROLE scm_cdc LOGIN PASSWORD 'scm_cdc_dev' REPLICATION;
 GRANT CONNECT ON DATABASE scm TO scm_cdc;
 GRANT USAGE ON SCHEMA public TO scm_cdc;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO scm_cdc;

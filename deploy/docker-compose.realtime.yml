@@ -43,7 +43,9 @@ services:
       retries: 10
 
   kafka:
-    image: apache/kafka:3.9.0
+    # cp-kafka 与 CI/testcontainers 同镜像族（KRaft 单节点）；apache/kafka
+    # 等价，镜像源故障时二者可互换
+    image: confluentinc/cp-kafka:7.6.0
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -54,12 +56,15 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-      CLUSTER_ID: edpV13RealtimeDev
+      # cp-kafka 要求 22 位 base64 UUID 形态（apache/kafka 无此限制）
+      CLUSTER_ID: xkcD6BDhQ12hHDK1PZL1hQ
     ports:
       - "9092:9092"
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:29092 > /dev/null 2>&1"]
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server kafka:29092 > /dev/null 2>&1"]
       interval: 10s
       timeout: 10s
       retries: 12
@@ -79,8 +84,11 @@ services:
       STATUS_STORAGE_TOPIC: edp-connect-status
       KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
-      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      # schemas.enable=true：消息体为 {"schema":..,"payload":{..}} 信封——
+      # 契约 contracts/realtime/debezium-event.schema.json 要求 payload 包装
+      # （false 时扁平化输出，消费侧按契约拒绝进 DLQ）
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
     ports:
       - "8083:8083"
     healthcheck:

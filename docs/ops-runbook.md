@@ -79,26 +79,36 @@
   sh deploy/migrate.sh   # 0018 realtime schema 随全量迁移
   ```
 
-- **注册 Debezium Connector**（connect 就绪后一次性）：
+- **注册 Debezium Connector**（connect 就绪后一次性；实测调优项已并入：
+  RegexRouter 去 schema 段对齐 topic 规范、`schemas.enable=true` 契约信封、
+  `decimal.handling.mode=string` 数值可读化、账号需 REPLICATION 属性——
+  pg-init-realtime 已带，真实对端见对端条件清单风险项）：
 
   ```powershell
-  curl -X POST http://localhost:8083/connectors -H "Content-Type: application/json" -d @- <<EOF
+  curl -X PUT http://localhost:8083/connectors/edp-scm-source/config `
+    -H "Content-Type: application/json" -d @- <<EOF
   {
-    "name": "edp-scm-source",
-    "config": {
-      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-      "database.hostname": "scm-db", "database.port": "5432",
-      "database.user": "scm_cdc", "database.password": "scm_cdc_dev",
-      "database.dbname": "scm", "topic.prefix": "edp.default.scm",
-      "publication.name": "scm_pub", "plugin.name": "pgoutput",
-      "slot.name": "edp_debezium_scm", "snapshot.mode": "initial",
-      "topic.creation.default.replication.factor": 1
-    }
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "scm-db", "database.port": "5432",
+    "database.user": "scm_cdc", "database.password": "scm_cdc_dev",
+    "database.dbname": "scm", "topic.prefix": "edp.default.scm",
+    "publication.name": "scm_pub", "plugin.name": "pgoutput",
+    "slot.name": "edp_debezium_scm", "snapshot.mode": "initial",
+    "topic.creation.default.replication.factor": 1,
+    "topic.creation.default.partitions": 1,
+    "transforms": "dropSchema",
+    "transforms.dropSchema.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.dropSchema.regex": "edp\\\\.default\\\\.scm\\\\.public\\\\.(.*)",
+    "transforms.dropSchema.replacement": "edp.default.scm.$1",
+    "decimal.handling.mode": "string",
+    "time.precision.mode": "connect"
   }
   EOF
   ```
 
-  topic 命名：`edp.default.scm.{table}`；白名单对齐 docs/V1.3_对端条件清单.md。
+  topic 命名：Debezium 缺省输出 `{prefix}.{schema}.{table}`（含 public 段），
+  RegexRouter 重写为契约规范 `edp.default.scm.{table}`；白名单对齐
+  docs/V1.3_对端条件清单.md。
 - **验证消费**：scm-db 插一行 orders → 秒级出现在 EDP（对象/事件/证据
   via='capture'，RAW batch_id=`capture:{topic}:{partition}:{offset}`）；
   双轨对账：`uv run python -m edp_api.modules.ingest.cli reconcile-capture
