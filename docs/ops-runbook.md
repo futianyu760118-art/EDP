@@ -61,3 +61,61 @@
   闭环五组）；docs/V1.2_门禁复检与验收标准核对.md（21 项核对）。
 - **已知偏差**：tools official_only 过渡期开关（official_only=false）；
   CSV 通道仅 CSV（xlsx 先另存）；value ledger 复用 metric 权限轨道。
+
+---
+
+## V1.3 新增运维面（实时链路，2026-10 迭代）
+
+- **schema**：realtime(2 表：stream_offsets 位点 / stream_dlq 死信，
+  **无 RLS**——平台基础设施坐标，裁定见 0018 迁移 docstring)；迁移 0018。
+- **worker 三常驻**：outbox + admission + `stream_consume.stream_loop`
+  （EDP_STREAM_KAFKA_BOOTSTRAP 未配置即不启用）+ `masterdata_job`
+  主数据兜底（EDP_MASTERDATA_ADAPTERS 未配置即不启用）。
+- **dev 起栈**（可选叠加，不进默认 compose）：
+
+  ```powershell
+  docker compose -f deploy/docker-compose.dev.yml `
+    -f deploy/docker-compose.realtime.yml up -d --build
+  sh deploy/migrate.sh   # 0018 realtime schema 随全量迁移
+  ```
+
+- **注册 Debezium Connector**（connect 就绪后一次性）：
+
+  ```powershell
+  curl -X POST http://localhost:8083/connectors -H "Content-Type: application/json" -d @- <<EOF
+  {
+    "name": "edp-scm-source",
+    "config": {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "database.hostname": "scm-db", "database.port": "5432",
+      "database.user": "scm_cdc", "database.password": "scm_cdc_dev",
+      "database.dbname": "scm", "topic.prefix": "edp.default.scm",
+      "publication.name": "scm_pub", "plugin.name": "pgoutput",
+      "slot.name": "edp_debezium_scm", "snapshot.mode": "initial",
+      "topic.creation.default.replication.factor": 1
+    }
+  }
+  EOF
+  ```
+
+  topic 命名：`edp.default.scm.{table}`；白名单对齐 docs/V1.3_对端条件清单.md。
+- **验证消费**：scm-db 插一行 orders → 秒级出现在 EDP（对象/事件/证据
+  via='capture'，RAW batch_id=`capture:{topic}:{partition}:{offset}`）；
+  双轨对账：`uv run python -m edp_api.modules.ingest.cli reconcile-capture
+  --capture-source scm`。
+- **位点事实来源 = PG**（realtime.stream_offsets；Kafka 不 commit）——
+  消费重启用库内位点 seek；重置消费：删对应 (consumer_group, topic) 行。
+- **故障处置**：
+  - 毒消息（解析失败）→ realtime.stream_dlq（error 列含原因；按坐标
+    修数后可重发，重放走幂等）；
+  - 管道失败重试风暴（retried 持续增长）→ 看 edp.worker.stream 日志；
+    头部阻塞是设计行为（不丢不重优先）；
+  - slot 堆积（G5 告警）→ 先看消费延迟（updated_at 落后），必要时
+    扩 worker 或暂停实时轨回退拉取兜底；
+  - broker 不可达 → stream_loop 启动/运行均有退避重试（2s 起指数，
+    上限 15s），恢复自动续传。
+- **监控判据（G5）**：端到端 P99、0 重复（duplicated 收敛口径）、
+  对账偏差 0、slot 堆积无积压、源库负载不超标（基线随 T48 压测定）。
+- **已知偏差**：Debezium Connector 本体不在 CI（testcontainers 信封
+  直注覆盖消费侧；Connector 由 dev compose/运维验证）；masterdata 兜底
+  不落 ops.tasks 行（日志可观测，任务轨道后续评估）。

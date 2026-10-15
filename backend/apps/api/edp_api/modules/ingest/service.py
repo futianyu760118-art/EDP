@@ -126,6 +126,23 @@ class ReconciliationRow:
     ok: bool
 
 
+@dataclass(slots=True)
+class CaptureReconciliationRow:
+    """双轨对账单行（V1.3 T47）：拉取轨计数 vs CDC 轨计数。
+
+    source_count = 拉取适配器全集（fetch_incremental(纪元)，同 reconcile
+    口径）；capture_count = capture 通道 SNAPSHOT 事件计数。ok = 两计数
+    相等（CDC 漏数由本行暴露，拉取轨兜底补数后收敛）。
+    """
+
+    source_system: str
+    capture_source_system: str
+    object_type: str
+    source_count: int
+    capture_count: int
+    ok: bool
+
+
 def service_principal(tenant_id: UUID) -> Principal:
     """管道服务主体（ErpMock 固定 adapter:erp；真实适配器接入时泛化）。"""
     return Principal(id=SERVICE_ACTOR_ID, kind="SERVICE", tenant_id=tenant_id)
@@ -191,11 +208,32 @@ _EVIDENCE_COUNT_SQL = text("""
     GROUP BY bo.object_type
 """)
 
+# capture 通道计数（V1.3 T47）：via='capture' 的 SNAPSHOT 事件按对象类型
+_CAPTURE_COUNT_SQL = text(r"""
+    SELECT bo.object_type AS object_type, count(*) AS n
+    FROM event.events e
+    JOIN master.business_objects bo
+      ON bo.object_id = e.object_id AND bo.tenant_id = e.tenant_id
+    WHERE e.tenant_id = :tid AND e.source_system = :src
+      AND e.event_type LIKE '%\_SNAPSHOT' AND e.data->>'via' = 'capture'
+    GROUP BY bo.object_type
+""")
+
 
 async def process_record(
-    sess: AsyncSession, tenant_id: UUID, record: SourceRecord
+    sess: AsyncSession,
+    tenant_id: UUID,
+    record: SourceRecord,
+    *,
+    via: str = "pipeline",
+    batch_id: str | None = None,
 ) -> bool:
     """单条源记录 → 三元组（对象/事件/证据）+ outbox；返回 registered。
+
+    通道标记（V1.3 T45）：``via`` 落事件 data 与审计 detail（缺省
+    "pipeline"；实时消费侧传 "capture"），``batch_id`` 落 RAW 留存行
+    （消费侧传 "capture:{topic}:{partition}:{offset}"——血缘回放可定位
+    Kafka 坐标）；其余管道语义不变。
 
     duplicated（事件已存在 / ON CONFLICT 命中）返回 False 且不触碰 revision；
     领域投影（T4）在对象 upsert 后、事件写入前调用（savepoint 隔离：投影
@@ -237,7 +275,7 @@ async def process_record(
             "object_type": record.object_type,
             "source_timestamp": occurred_at,
             "payload": json.dumps(record.payload, ensure_ascii=False),
-            "batch_id": None,
+            "batch_id": batch_id,
             "checksum": evidence_service.compute_checksum(record.payload),
             "schema_version": None,
         },
@@ -318,7 +356,7 @@ async def process_record(
             "source_system": record.source_system,
             "occurred_at": occurred_at,
             "actor": SERVICE_ACTOR_ID,
-            "data": json.dumps({"via": "pipeline"}, ensure_ascii=False),
+            "data": json.dumps({"via": via}, ensure_ascii=False),
             "idempotency_key": f"adapter:{event_id}",
             "latency_ms": latency_ms,
         },
@@ -338,7 +376,7 @@ async def process_record(
         resource_type="events",
         resource_id=str(event_id),
         detail={
-            "via": "pipeline",
+            "via": via,
             "event_type": event_type,
             "object_id": str(obj.object_id),
             "source_system": record.source_system,
@@ -577,6 +615,47 @@ async def reconcile(
                 edp_count_events=count_events,
                 edp_count_evidence=count_evidence,
                 ok=source_count == count_events == count_evidence,
+            )
+        )
+    return rows
+
+
+async def reconcile_capture(
+    sess: AsyncSession,
+    tenant_id: UUID,
+    adapter: SourceAdapter,
+    capture_source_system: str,
+) -> list[CaptureReconciliationRow]:
+    """双轨对账（V1.3 T47）：拉取轨全集 vs CDC 轨（via='capture'）计数。
+
+    拉取轨口径与 reconcile 一致（fetch_incremental(纪元)=全集）；capture
+    轨按事件 data.via='capture' 过滤——两轨各自 source_system（路由配置
+    双轨同源时一致，测试/混部可不同）。单侧独有类型同样成行（偏差可见）。
+    """
+    source_counts: dict[str, int] = {}
+    for record in adapter.fetch_incremental(_EPOCH):
+        source_counts[record.object_type] = (
+            source_counts.get(record.object_type, 0) + 1
+        )
+
+    capture_counts = await _count_by_type(
+        sess,
+        _CAPTURE_COUNT_SQL,
+        {"tid": tenant_id, "src": capture_source_system},
+    )
+
+    rows: list[CaptureReconciliationRow] = []
+    for object_type in sorted(set(source_counts) | set(capture_counts)):
+        source_count = source_counts.get(object_type, 0)
+        capture_count = capture_counts.get(object_type, 0)
+        rows.append(
+            CaptureReconciliationRow(
+                source_system=adapter.name,
+                capture_source_system=capture_source_system,
+                object_type=object_type,
+                source_count=source_count,
+                capture_count=capture_count,
+                ok=source_count == capture_count,
             )
         )
     return rows

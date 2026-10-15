@@ -6,6 +6,7 @@ from .demo_plm import DemoPlmAdapter
 from .erp_mock import ErpMockAdapter, all_records
 from .mes_mock import DemoMesAdapter
 from .registry import AdapterRegistry
+from .stream import StreamParseError, StreamRoute, parse_debezium_event
 
 __all__ = [
     "AdapterHealth",
@@ -16,5 +17,8 @@ __all__ = [
     "ErpMockAdapter",
     "SourceAdapter",
     "SourceRecord",
+    "StreamParseError",
+    "StreamRoute",
     "all_records",
+    "parse_debezium_event",
 ]

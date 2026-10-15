@@ -12,7 +12,7 @@ flowchart LR
     end
     subgraph 后端
         api["api<br/>FastAPI 模块化单体<br/>auth / registry / events"]
-        worker["worker<br/>Outbox 分发<br/>（SKIP LOCKED / 指数退避）"]
+        worker["worker<br/>Outbox 分发 + admission 预审<br/>+ 实时流消费（V1.3，可选）<br/>+ 主数据兜底（V1.3，可选）<br/>（SKIP LOCKED / 指数退避）"]
     end
     db[("PostgreSQL 16<br/>15 Schema + RLS")]
     web -- "/api（nginx 反代）" --> api
@@ -45,6 +45,12 @@ sh deploy/migrate.sh   # 迁移走 compose 内网，无需 override；PowerShell
 docker compose -f deploy/docker-compose.dev.yml run --rm --no-deps `
   -e EDP_DATABASE_URL="postgresql+asyncpg://edp_migrator:edp_dev@db:5432/edp" `
   api alembic upgrade head
+```
+
+V1.3 实时链路（CDC+Kafka）开发栈为可选叠加（scm-db 模拟源库 / kafka / debezium connect，启用 worker 消费与主数据兜底）：
+
+```powershell
+docker compose -f deploy/docker-compose.dev.yml -f deploy/docker-compose.realtime.yml up -d --build
 ```
 
 ### 种子凭据（dev/CI 专用；prod 由 `EDP_ADMIN_INITIAL_PASSWORD` / `EDP_DEV_API_KEY` 强制覆盖）

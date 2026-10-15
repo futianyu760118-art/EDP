@@ -442,3 +442,32 @@ Branch: feat/v12-governance（续用）
 V1.2 迭代收官状态：40 任务完成 35；T28/T29（真实 ERP/MES 连接器）与 T31
 （真实数据抽样）依赖外部对接资源；T35~T40 以 mock+CSV 先行完成，真实数据
 UAT 待连接器就绪后复跑。
+
+---
+
+# SDD Progress Ledger — EDP V1.3 实时链路（CDC+Kafka，T41~T48 无外部依赖部分）
+
+Spec: docs/AEOS_企业数据与证据中台_EDP_迭代行动计划_V1.3.md + 总体方案 V1.3（C17~C22）
+Branch: feat/v13-realtime（worktree 数据平台-v13）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T41 | DONE（待签） | docs/V1.3_解冻裁决.md | V13-UNFREEZE-01：仅 Kafka+Debezium 解冻，蔓延防线/回退条款/签字栏 |
+| T42 | DONE（dev 基线） | docs/V1.3_对端条件清单.md + deploy/pg-init-realtime/01-scm-baseline.sql | wal_level=logical + scm_pub + scm_cdc 只读账号 + 白表种子；真实对端确认待 DBA |
+| T43 | DONE（dev 基线） | deploy/docker-compose.realtime.yml + ops-runbook V1.3 节 | scm-db/kafka(KRaft)/connect(debezium 2.7.2) 可选叠加；Connector 注册命令入 runbook；真实环境部署归运维 |
+| T44 | DONE | contracts/realtime/debezium-event.schema.json + edp_adapters/stream.py + 迁移 0018 + edp_worker/stream_consume.py | 契约 gate 14/14；parse 14 单测（op=d/tombstone→None；ts_ms 时间语义；pattern 校验）；realtime.stream_offsets/stream_dlq（无 RLS 裁定）；消费者 PG 位点事实源（rebalance listener seek）、DLQ 坐标唯一、启动/管道双退避、头部阻塞重试 |
+| T45 | DONE | process_record(via, batch_id) 通道标记 | 事件 data/审计 detail via='capture'；RAW batch_id=capture:{topic}:{p}:{o}（血缘可定位 Kafka 坐标）；缺省 'pipeline' 语义零变更 |
+| T46 | DONE | edp_worker/masterdata_job.py | 逐租户×适配器 incremental；与 API 触发 sync 同键 advisory lock 互斥；7 单测 |
+| T47 | DONE | ingest.reconcile_capture + CLI reconcile-capture | 拉取轨全集 vs via='capture' 事件计数，按 object_type 逐行 ok；CLI 子命令 + 2 集成测试 |
+| T48 | DONE（dev/CI 级） | tests/integration/test_v13_realtime_e2e.py | 真实 KafkaContainer 全链：3 注册/1 DLQ/位点推进、幂等重放 duplicated 收敛、断点续传 seek 不丢不重；真实 Debezium/真实源库 P99 待 T42/T43 真实环境补验 |
+
+验证：backend 全量 **770 passed**（725 基线 + 45：单测 36 + 集成 9）；ruff / lint-imports 绿；
+schema-gate 14/14；alembic 0018 up→down→up 循环（一次性容器）通过。
+
+关键裁定（记入偏差）：
+1. realtime.* 不启用 RLS——基础设施坐标表（位点/死信），无业务租户语义（0018 docstring + 方案 V1.3 §2.2 注）；
+2. Debezium Connector 本体不进 CI——消费侧以契约信封直注覆盖（e2e），Connector 部署件由 dev compose/runbook 验证；
+3. aiokafka 0.14「start 后 subscribe」触发 fetcher assignment 断言竞态——订阅先于 start（stream_consume 注释）；
+4. stream 管道失败头部阻塞重试——同分区跳位会致重启丢消息，吞吐让位于不丢不重；
+5. masterdata 兜底不落 ops.tasks 行——先日志可观测，任务轨道随 worker 调度改造评估；
+6. T28/T29/T31 延续待外部资源（ERP/MES 字段清单/只读账号），本会话未触碰。

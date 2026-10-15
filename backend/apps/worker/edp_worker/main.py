@@ -23,7 +23,9 @@ from edp_api.core.events import (
 )
 
 from edp_worker.admission_job import admission_loop
+from edp_worker.masterdata_job import MasterdataSettings, masterdata_loop
 from edp_worker.outbox_dispatch import run_forever
+from edp_worker.stream_consume import StreamSettings, stream_loop
 
 logger = logging.getLogger("edp.worker")
 
@@ -44,10 +46,37 @@ async def _work() -> None:
     register_subscriber(EBMSNotifyStubSubscriber())
     logger.info("worker started subscribers=%d", len(subscribers))
     # 并发常驻：outbox 分发 + admission 机器预审调度（V1.2 T32，缺省 60s）
-    await asyncio.gather(
+    # + 实时流消费（V1.3 T44，EDP_STREAM_KAFKA_BOOTSTRAP 未配置时不启用）
+    # + 主数据定时增量兜底（V1.3 T46，EDP_MASTERDATA_ADAPTERS 未配置时不启用）
+    stream_settings = StreamSettings.from_env()
+    masterdata_settings = MasterdataSettings.from_env()
+    tasks = [
         run_forever(engine, list(subscribers)),
         admission_loop(engine),
-    )
+    ]
+    if stream_settings is not None:
+        logger.info(
+            "stream enabled topics=%s group=%s",
+            [e.route.topic for e in stream_settings.routes],
+            stream_settings.group,
+        )
+        tasks.append(stream_loop(engine, stream_settings))
+    else:
+        logger.info("stream disabled (EDP_STREAM_KAFKA_BOOTSTRAP unset)")
+    if masterdata_settings is not None:
+        logger.info(
+            "masterdata兜底 enabled adapters=%s interval=%ss",
+            masterdata_settings.adapters,
+            masterdata_settings.interval_s,
+        )
+        tasks.append(
+            masterdata_loop(
+                engine,
+                interval=masterdata_settings.interval_s,
+                adapters=masterdata_settings.adapters,
+            )
+        )
+    await asyncio.gather(*tasks)
 
 
 async def main() -> None:

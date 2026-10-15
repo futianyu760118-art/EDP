@@ -1,4 +1,5 @@
-"""管道 CLI（T15）：python -m edp_api.modules.ingest.cli {full,incremental,reconcile}。
+"""管道 CLI（T15）：python -m edp_api.modules.ingest.cli
+{full,incremental,reconcile,reconcile-capture}。
 
 dev 环境（compose db 映射宿主 15432，edp_app 应用角色）用法：
     cd backend && uv run python -m edp_api.modules.ingest.cli full
@@ -50,6 +51,15 @@ _RECONCILE_HEADERS = (
     "ok",
 )
 
+_CAPTURE_RECONCILE_HEADERS = (
+    "pull_source",
+    "capture_source",
+    "object_type",
+    "pull",
+    "capture",
+    "ok",
+)
+
 
 async def _resolve_tenant_id(engine: AsyncEngine, slug: str) -> UUID | None:
     """slug → tenant_id（tenants 控制面表不受 RLS，无需租户绑定）。"""
@@ -82,6 +92,39 @@ async def _cmd_reconcile(engine: AsyncEngine, tenant_id: UUID) -> int:
         await bind_tenant(sess, tenant_id)
         rows = await ingest_service.reconcile(sess, tenant_id, ErpMockAdapter())
     _print_reconcile_table(rows)
+    deviated = sum(1 for row in rows if not row.ok)
+    print(f"偏差行数 {deviated} / 共 {len(rows)} 行")
+    return EXIT_FAILURE if deviated > 0 else EXIT_OK
+
+
+async def _cmd_reconcile_capture(
+    engine: AsyncEngine, tenant_id: UUID, capture_source: str
+) -> int:
+    """reconcile-capture（V1.3 T47）：CDC 轨 vs 拉取轨双轨对账。"""
+    async with async_sessionmaker(engine, expire_on_commit=False)() as sess:
+        await bind_tenant(sess, tenant_id)
+        rows = await ingest_service.reconcile_capture(
+            sess, tenant_id, ErpMockAdapter(), capture_source_system=capture_source
+        )
+    table = [
+        (
+            row.source_system,
+            row.capture_source_system,
+            row.object_type,
+            str(row.source_count),
+            str(row.capture_count),
+            str(row.ok),
+        )
+        for row in rows
+    ]
+    widths = [
+        max([len(_CAPTURE_RECONCILE_HEADERS[i])] + [len(line[i]) for line in table])
+        for i in range(len(_CAPTURE_RECONCILE_HEADERS))
+    ]
+    fmt = "  ".join(f"{{:{width}}}" for width in widths)
+    print(fmt.format(*_CAPTURE_RECONCILE_HEADERS))
+    for line in table:
+        print(fmt.format(*line))
     deviated = sum(1 for row in rows if not row.ok)
     print(f"偏差行数 {deviated} / 共 {len(rows)} 行")
     return EXIT_FAILURE if deviated > 0 else EXIT_OK
@@ -123,13 +166,19 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "command",
-        choices=("full", "incremental", "reconcile"),
-        help="full=全量同步 incremental=自水位增量 reconcile=对账",
+        choices=("full", "incremental", "reconcile", "reconcile-capture"),
+        help="full=全量同步 incremental=自水位增量 reconcile=对账"
+        " reconcile-capture=CDC/拉取双轨对账",
+    )
+    parser.add_argument(
+        "--capture-source",
+        default="scm",
+        help="reconcile-capture 的 CDC 轨 source_system（缺省 scm）",
     )
     return parser
 
 
-async def _run(url: str, command: str, tenant_slug: str) -> int:
+async def _run(url: str, command: str, tenant_slug: str, capture_source: str) -> int:
     install_audit_aspect()
     engine = create_async_engine(url)
     try:
@@ -139,6 +188,8 @@ async def _run(url: str, command: str, tenant_slug: str) -> int:
             return EXIT_NOT_FOUND
         if command == "reconcile":
             return await _cmd_reconcile(engine, tenant_id)
+        if command == "reconcile-capture":
+            return await _cmd_reconcile_capture(engine, tenant_id, capture_source)
         return await _cmd_sync(engine, tenant_id, command)
     finally:
         await engine.dispose()
@@ -153,7 +204,9 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     url = os.environ.get("EDP_DATABASE_URL") or DEFAULT_DATABASE_URL
     try:
-        return asyncio.run(_run(url, args.command, args.tenant_slug))
+        return asyncio.run(
+            _run(url, args.command, args.tenant_slug, args.capture_source)
+        )
     except Exception:
         logging.getLogger(__name__).exception("CLI 执行失败")
         return EXIT_FAILURE
