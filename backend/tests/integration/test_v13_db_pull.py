@@ -1,8 +1,8 @@
-"""V1.3 T49 集成测试：SPC 主数据拉取适配器（真实 PG 源库 → EDP 管道）。
+"""V1.3 T50 集成测试：通用 DbPullAdapter（真实 PG 源库 → EDP 管道）。
 
-源库：独立 PostgresContainer 模拟供应链中台（public 三张代表表：
-scm_material 增量列 update_time、scm_supplier 含敏感列、scm_process 无
-时间列全量）。覆盖：
+源库：独立 PostgresContainer 模拟对端系统（三张代表表：scm_material
+增量列 update_time、scm_supplier 含敏感列、scm_process 无时间列全量）。
+覆盖：
 1. 全量同步：对象/事件/证据入库，via='pipeline'（拉取轨）；
 2. 敏感列 SQL 级排除：contact_phone 等不进 RAW/attributes；
 3. 增量语义：update_time 未变 → duplicated；bump → 新 revision；
@@ -11,13 +11,24 @@ scm_material 增量列 update_time、scm_supplier 含敏感列、scm_process 无
 """
 
 import pytest
-from edp_adapters.spc_pull import SpcPullAdapter
+from edp_adapters.db_pull import DbPullAdapter, DbTableSpec
 from edp_api.modules.ingest import service as ingest_service
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from testcontainers.community.postgres import PostgresContainer
 
 pytestmark = [pytest.mark.integration]
+
+_SPECS = [
+    DbTableSpec("scm_material", "update_time", "master"),
+    DbTableSpec(
+        "scm_supplier",
+        "update_time",
+        "procurement",
+        ("contact_person", "contact_phone", "fax", "address"),
+    ),
+    DbTableSpec("scm_process", None, "production"),
+]
 
 
 @pytest.fixture(scope="module")
@@ -68,8 +79,8 @@ async def _init_source(dsn: str) -> None:
         await conn.close()
 
 
-def _adapter(spc_dsn: str) -> SpcPullAdapter:
-    return SpcPullAdapter(dsn=spc_dsn)
+def _adapter(spc_dsn: str) -> DbPullAdapter:
+    return DbPullAdapter(name="spc", dsn=spc_dsn, table_specs=_SPECS)
 
 
 async def _tenant_id(db_session: AsyncSession):

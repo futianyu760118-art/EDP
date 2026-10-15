@@ -123,9 +123,10 @@ services:
          {"topic": "edp.default.spc.purchase_order", "source_system": "spc",
           "pk_columns": ["id"], "owner_domain": "procurement", "tenant": "default"}]
       EDP_STREAM_GROUP: edp-worker
-      # T49：SPC 主数据拉取兜底（演练连 spc_test；生产换 spc_db + scm_cdc 账号）
-      EDP_SPC_DB_URL: postgresql://root:u0yZXCVD~BhxnrFt2Pjo@150.158.13.110:15432/spc_test
-      EDP_MASTERDATA_ADAPTERS: "erp-demo,plm-demo,spc"
+      # T50：适配器改为 DB 装配（catalog POST /systems + adapter_config），
+      # 不再用 EDP_SPC_DB_URL env——注册示例见 ops-runbook「T50 适配器 CRUD」；
+      # 兜底名单填系统名（catalog 注册的适配器名），worker 每轮从 systems 表装配
+      EDP_MASTERDATA_ADAPTERS: "spc"
       EDP_MASTERDATA_INTERVAL_S: "3600"
 
 volumes:

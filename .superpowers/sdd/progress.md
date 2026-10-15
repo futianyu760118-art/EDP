@@ -491,3 +491,28 @@ Branch: feat/v13-realtime（续用）
 3. payload JSON 归一（datetime→isoformat/Decimal→str）在适配器层完成——真实适配器必须输出 JSON 原生值（mock 天然满足，管道契约隐含要求）；
 4. 缺表容忍：对端演练库缺表时跳过不报错（生产库 10 张齐后自动生效）；
 5. 踩坑警示：PowerShell Set-Content -Encoding UTF8（PS5.1 带 BOM）曾两次写坏 Python 源文件——统一改由 edit/write 工具或 Python 写文件。
+
+---
+
+# SDD Progress Ledger — EDP V1.3 T50（适配器前端可配置化 / 完整版）
+
+Spec: 行动计划 V1.3 T50（用户裁定「做完整版」：通用驱动 + systems 持久化 + CRUD API + 前端）
+Branch: feat/v13-realtime（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T50 | DONE（dev/演练级） | 迁移 0019 + edp_adapters/db_pull.py + catalog CRUD + adapters_admin 动态注册表 + worker DB 装配 + 前端弹窗 | systems.adapter_config JSONB；DbPullAdapter 配置驱动（替换硬编码 SpcPullAdapter）；POST/PUT/DELETE /systems/{id} + /test 探活；动态注册表 (tenant_id, name) 键 + RLS 隔离 + 静态 demo 回退 + is_dynamic 清单 mode；worker 主数据每租户 refresh_dynamic 装配；前端 CreateAdapterModal 接入方式 REST/DB_PULL + DSN + 表配置 JSON；契约导出 + SDK regen + 指纹绿 |
+
+验证：backend 全量 **788 passed**；ruff/lint-imports 绿；schema-gate 14/14；alembic 0019 up/down/up 循环通过；
+frontend web 257 + api-sdk 22 测试绿、lint 0 error、build 绿、契约指纹 OK。
+实跑（dev 栈）：API 注册 spc（PUT 适配老水位行）→ 清单 mode=real/health OK → POST sync 受理 →
+POST /systems/{id}/test {ok:true} → worker 兜底 DB 装配同步。
+
+关键裁定（记入偏差）：
+1. 动态注册表键 (tenant_id, name)——systems 唯一键本就 (tenant_id, name)，进程内全局 name 键不支持跨租户同名配置；静态 demo 适配器保持全局；
+2. 原生 SQL（asyncpg）jsonb 返回 JSON 文本、ORM 返回 dict——build_adapter_from_config 双形态归一（None/str/dict 防御）；
+3. catalog update 的 updated_at 用 datetime 值赋值（func.now() 在 model_validate 触发 MissingGreenlet 懒加载）；
+4. 真实适配器 health_check 内跑 asyncio.run（线程契约）——list/status/test 三处请求路径全部 to_thread 包裹（asyncio.run 在运行中事件循环直接炸）；
+5. DSN 明文存 adapter_config（dev 演练可接受；生产 secret 注入评审记为后续项）；
+6. 前端删除/编辑 UI 未做（后端 DELETE/PUT 已备 + 集成测试覆盖）——记后续前端项；
+7. 旧的 spc 水位 systems 行与 catalog 注册同名冲突——PUT 复用该行（迁移兼容路径：老行 adapter_config 为空时 PUT 注入配置即升级为 real）。

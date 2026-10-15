@@ -8228,8 +8228,21 @@
         "type": "object"
       },
       "SystemCreateRequest": {
-        "description": "POST /systems 请求（B.7）。",
+        "description": "POST /systems 请求（B.7 + V1.3 T50 adapter_config 扩展）。",
         "properties": {
+          "adapter_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "驱动配置（DB 拉取：dsn + tables 表规格列表）；提供即装配真实适配器",
+            "title": "Adapter Config"
+          },
           "auth_config": {
             "additionalProperties": true,
             "title": "Auth Config",
@@ -8299,8 +8312,19 @@
         "type": "object"
       },
       "SystemListItem": {
-        "description": "GET /systems 列表项（B.7 简投影）。",
+        "description": "GET /systems 列表项（B.7 简投影 + T50 adapter_mode）。",
         "properties": {
+          "adapter_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adapter Mode"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -8344,6 +8368,174 @@
           "created_at"
         ],
         "title": "SystemListItem",
+        "type": "object"
+      },
+      "SystemResponse": {
+        "description": "GET/PUT /systems/{id} 完整对象（含驱动配置，管理页编辑用）。",
+        "properties": {
+          "adapter_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adapter Config"
+          },
+          "adapter_mode": {
+            "title": "Adapter Mode",
+            "type": "string"
+          },
+          "auth_config": {
+            "additionalProperties": true,
+            "title": "Auth Config",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "system_id": {
+            "format": "uuid",
+            "title": "System Id",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system_id",
+          "name",
+          "type",
+          "endpoint",
+          "auth_config",
+          "adapter_config",
+          "adapter_mode",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SystemResponse",
+        "type": "object"
+      },
+      "SystemTestResponse": {
+        "description": "POST /systems/{id}/test 响应（探活结果）。",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "detail"
+        ],
+        "title": "SystemTestResponse",
+        "type": "object"
+      },
+      "SystemUpdateRequest": {
+        "description": "PUT /systems/{id} 局部更新（仅传入字段覆盖）。",
+        "properties": {
+          "adapter_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adapter Config"
+          },
+          "auth_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Config"
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ACTIVE",
+                  "DISABLED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "SystemUpdateRequest",
         "type": "object"
       },
       "TagAttachItem": {
@@ -18181,6 +18373,361 @@
           }
         },
         "summary": "注册系统（源/消费方连接配置）",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/systems/{system_id}": {
+      "delete": {
+        "description": "删除注册行（适配器注册表随事务收尾重载，见 adapters_admin）。",
+        "operationId": "delete_system_api_v1_systems__system_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "system_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "System Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR：参数缺失或格式错误"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "UNAUTHENTICATED：未认证或凭据无效"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性）"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "CONFLICT：版本冲突（响应附 current_revision）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "删除系统（含其驱动配置）",
+        "tags": [
+          "catalog"
+        ]
+      },
+      "get": {
+        "description": "RLS 会话：跨租户行不可见 → 404（与不存在同义）。",
+        "operationId": "get_system_api_v1_systems__system_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "system_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "System Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "UNAUTHENTICATED：未认证或凭据无效"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "系统详情（含驱动配置，管理页编辑用）",
+        "tags": [
+          "catalog"
+        ]
+      },
+      "put": {
+        "description": "adapter_config 变更同步 adapter_mode（real/mock）。",
+        "operationId": "update_system_api_v1_systems__system_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "system_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "System Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SystemUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR：参数缺失或格式错误"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "UNAUTHENTICATED：未认证或凭据无效"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性）"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "CONFLICT：版本冲突（响应附 current_revision）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "更新系统（局部更新：type/endpoint/auth/adapter_config/status）",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/systems/{system_id}/test": {
+      "post": {
+        "description": "adapter_config 装配为 DbPullAdapter 后探活（SELECT 1，超时 5s）；\n无驱动配置 → 400 VALIDATION_ERROR。",
+        "operationId": "test_system_api_v1_systems__system_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "system_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "System Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemTestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR：参数缺失或格式错误"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "UNAUTHENTICATED：未认证或凭据无效"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性）"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "CONFLICT：版本冲突（响应附 current_revision）"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "测试连接（驱动配置装配 + 探活，只读）",
         "tags": [
           "catalog"
         ]

@@ -136,13 +136,32 @@
   decimal 字符串无损）均入 EDP——revision 递增、via='capture'、RAW
   坐标血缘、位点推进；演练槽名 `edp_debezium_spc_test`（与生产槽
   `edp_debezium_scm` 区分）。
-- **T49 SPC 主数据拉取（2026-10-15 上线演练栈）**：worker 环境
-  `EDP_SPC_DB_URL`（演练 spc_test；生产换 spc_db + scm_cdc 账号）+
-  `EDP_MASTERDATA_ADAPTERS` 含 `spc`（适配器条件注册，未配置不出现）；
+- **T49 SPC 主数据拉取（2026-10-15 上线演练栈）**：适配器经 catalog
+  `POST /systems`（adapter_config）+ `EDP_MASTERDATA_ADAPTERS` 含 `spc`；
   10 张主数据表增量列名 `update_time`（scm_warehouse/location 为
   updated_at，scm_process/organization 全量纪元常量重放幂等）；敏感列
   SQL 级排除（scm_supplier 联系方式四列 / scm_customer.credit_code）；
   适配器拉取经 to_thread 不阻塞事件循环。
+- **T50 适配器 CRUD（前端可配置化，2026-10-15）**：不再用
+  `EDP_SPC_DB_URL` env——适配器 = catalog systems 行（adapter_config
+  非空即装配为 DbPullAdapter，键 (tenant, name)，RLS 天然隔离）。API：
+
+  ```powershell
+  # 注册（201）/ 更新（PUT /systems/{id}）/ 删除（DELETE /systems/{id}）/
+  # 测试连接（POST /systems/{id}/test）；同名 409
+  curl -X POST http://localhost:18000/api/v1/systems -H "Authorization: Bearer $TOKEN" `
+    -H "Content-Type: application/json" -d '{
+      "name": "spc", "type": "DB_PULL",
+      "adapter_config": {
+        "dsn": "postgresql://scm_cdc:***@150.158.13.110:15432/spc_db",
+        "tables": [{"table": "scm_material", "increment_column": "update_time",
+                    "owner_domain": "master", "excluded_columns": []}]
+      }}'
+  ```
+
+  前端适配器页「新增适配器」已带 接入方式（REST/DB_PULL）+ DSN + 表配置
+  JSON；worker 主数据兜底每轮从 systems 表装配（缓存随 refresh_dynamic）。
+  注意：DSN 含明文口令（dev 演练可接受；生产建议 secret 注入评审）。
 - **位点事实来源 = PG**（realtime.stream_offsets；Kafka 不 commit）——
   消费重启用库内位点 seek；重置消费：删对应 (consumer_group, topic) 行。
 - **故障处置**：

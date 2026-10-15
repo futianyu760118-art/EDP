@@ -1,13 +1,15 @@
-"""V1.3 T46 单测：主数据定时增量兜底（注入替身，不碰 DB/Kafka）。
+"""V1.3 T46/T50 单测：主数据定时增量兜底（注入替身，不碰 DB/Kafka）。
 
 覆盖：
 1. 配置解析：EDP_MASTERDATA_ADAPTERS/INTERVAL（空 = 禁用）；
 2. run_masterdata_round：逐租户 × 逐适配器 incremental 同步 + 互斥锁
    取/放；锁被占（与 API 触发 sync 同键）→ 跳过本轮该适配器；
+   适配器解析经 resolve 注入（T50：真实走 catalog 装配，测试替身）；
 3. masterdata_loop：按 interval 周期执行、stop 优雅退出。
 """
 
 import asyncio
+from types import SimpleNamespace
 
 import edp_worker.masterdata_job as mj
 import pytest
@@ -37,11 +39,30 @@ class _Adapters:
         return SyncStats(fetched=1, registered=1)
 
 
+class _Resolver:
+    """替身装配：返回带 name 的适配器对象；unknown → LookupError。"""
+
+    def __init__(self, names: set[str]):
+        self._names = names
+        self.calls: list[tuple[str, str]] = []
+
+    async def __call__(self, tenant_id, name):
+        self.calls.append((str(tenant_id), name))
+        if name not in self._names:
+            raise LookupError(name)
+        return SimpleNamespace(name=name)
+
+
 @pytest.fixture
 def adapters(monkeypatch):
     fake = _Adapters()
     monkeypatch.setattr(mj, "_run_incremental", fake)
     return fake
+
+
+@pytest.fixture
+def resolver():
+    return _Resolver({"erp-demo", "plm-demo"})
 
 
 @pytest.fixture
@@ -77,11 +98,12 @@ class TestConfig:
 
 
 class TestRound:
-    async def test_syncs_each_tenant_adapter_incremental(self, adapters, locks):
+    async def test_syncs_each_tenant_adapter_incremental(self, adapters, locks, resolver):
         calls = await run_masterdata_round(
             engine=None,
             tenant_ids=["t1", "t2"],
             adapter_names=("erp-demo", "plm-demo"),
+            resolve=resolver,
         )
         assert calls == 4
         assert sorted(adapters.synced) == [
@@ -94,26 +116,35 @@ class TestRound:
         assert len(locks["acquired"]) == 4
         assert all(m.released for m in locks["mutexes"].values())
 
-    async def test_busy_lock_skips_adapter(self, adapters, locks):
+    async def test_busy_lock_skips_adapter(self, adapters, locks, resolver):
         locks["held"] = mj.task_lock_key("adapter_sync", ref_name="erp-demo")
         calls = await run_masterdata_round(
-            engine=None, tenant_ids=["t1"], adapter_names=("erp-demo", "plm-demo")
+            engine=None,
+            tenant_ids=["t1"],
+            adapter_names=("erp-demo", "plm-demo"),
+            resolve=resolver,
         )
         assert calls == 1
         assert adapters.synced == [("t1", "plm-demo")]
 
-    async def test_unknown_adapter_isolated(self, adapters, locks):
+    async def test_unknown_adapter_isolated(self, adapters, locks, resolver):
         # 未注册适配器 → 该次跳过，不连坐其他适配器
         calls = await run_masterdata_round(
-            engine=None, tenant_ids=["t1"], adapter_names=("nope", "plm-demo")
+            engine=None,
+            tenant_ids=["t1"],
+            adapter_names=("nope", "plm-demo"),
+            resolve=resolver,
         )
         assert calls == 1
         assert adapters.synced == [("t1", "plm-demo")]
 
-    async def test_sync_failure_releases_lock_and_continues(self, adapters, locks):
+    async def test_sync_failure_releases_lock_and_continues(self, adapters, locks, resolver):
         adapters.fail_on = "erp-demo"
         calls = await run_masterdata_round(
-            engine=None, tenant_ids=["t1"], adapter_names=("erp-demo", "plm-demo")
+            engine=None,
+            tenant_ids=["t1"],
+            adapter_names=("erp-demo", "plm-demo"),
+            resolve=resolver,
         )
         assert calls == 1
         assert all(m.released for m in locks["mutexes"].values())
@@ -123,7 +154,7 @@ class TestLoop:
     async def test_loop_runs_rounds_and_stops(self, adapters, locks, monkeypatch):
         rounds = []
 
-        async def fake_round(engine=None, tenant_ids=None, adapter_names=None):
+        async def fake_round(engine=None, tenant_ids=None, adapter_names=None, resolve=None):
             rounds.append(1)
             return 0
 

@@ -1440,6 +1440,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/systems/{system_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 系统详情（含驱动配置，管理页编辑用）
+         * @description RLS 会话：跨租户行不可见 → 404（与不存在同义）。
+         */
+        get: operations["get_system_api_v1_systems__system_id__get"];
+        /**
+         * 更新系统（局部更新：type/endpoint/auth/adapter_config/status）
+         * @description adapter_config 变更同步 adapter_mode（real/mock）。
+         */
+        put: operations["update_system_api_v1_systems__system_id__put"];
+        post?: never;
+        /**
+         * 删除系统（含其驱动配置）
+         * @description 删除注册行（适配器注册表随事务收尾重载，见 adapters_admin）。
+         */
+        delete: operations["delete_system_api_v1_systems__system_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/systems/{system_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 测试连接（驱动配置装配 + 探活，只读）
+         * @description adapter_config 装配为 DbPullAdapter 后探活（SELECT 1，超时 5s）；
+         *     无驱动配置 → 400 VALIDATION_ERROR。
+         */
+        post: operations["test_system_api_v1_systems__system_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants": {
         parameters: {
             query?: never;
@@ -5229,9 +5278,16 @@ export interface components {
         };
         /**
          * SystemCreateRequest
-         * @description POST /systems 请求（B.7）。
+         * @description POST /systems 请求（B.7 + V1.3 T50 adapter_config 扩展）。
          */
         SystemCreateRequest: {
+            /**
+             * Adapter Config
+             * @description 驱动配置（DB 拉取：dsn + tables 表规格列表）；提供即装配真实适配器
+             */
+            adapter_config?: {
+                [key: string]: unknown;
+            } | null;
             /** Auth Config */
             auth_config?: {
                 [key: string]: unknown;
@@ -5265,9 +5321,11 @@ export interface components {
         };
         /**
          * SystemListItem
-         * @description GET /systems 列表项（B.7 简投影）。
+         * @description GET /systems 列表项（B.7 简投影 + T50 adapter_mode）。
          */
         SystemListItem: {
+            /** Adapter Mode */
+            adapter_mode?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -5286,6 +5344,75 @@ export interface components {
             system_id: string;
             /** Type */
             type: string;
+        };
+        /**
+         * SystemResponse
+         * @description GET/PUT /systems/{id} 完整对象（含驱动配置，管理页编辑用）。
+         */
+        SystemResponse: {
+            /** Adapter Config */
+            adapter_config: {
+                [key: string]: unknown;
+            } | null;
+            /** Adapter Mode */
+            adapter_mode: string;
+            /** Auth Config */
+            auth_config: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Endpoint */
+            endpoint: string | null;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /**
+             * System Id
+             * Format: uuid
+             */
+            system_id: string;
+            /** Type */
+            type: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * SystemTestResponse
+         * @description POST /systems/{id}/test 响应（探活结果）。
+         */
+        SystemTestResponse: {
+            /** Detail */
+            detail: string;
+            /** Ok */
+            ok: boolean;
+        };
+        /**
+         * SystemUpdateRequest
+         * @description PUT /systems/{id} 局部更新（仅传入字段覆盖）。
+         */
+        SystemUpdateRequest: {
+            /** Adapter Config */
+            adapter_config?: {
+                [key: string]: unknown;
+            } | null;
+            /** Auth Config */
+            auth_config?: {
+                [key: string]: unknown;
+            } | null;
+            /** Endpoint */
+            endpoint?: string | null;
+            /** Status */
+            status?: ("ACTIVE" | "DISABLED") | null;
+            /** Type */
+            type?: string | null;
         };
         /** TagAttachItem */
         TagAttachItem: {
@@ -11465,6 +11592,294 @@ export interface operations {
             };
             /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_system_api_v1_systems__system_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                system_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemResponse"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_system_api_v1_systems__system_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                system_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SystemUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_system_api_v1_systems__system_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                system_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CONFLICT：版本冲突（响应附 current_revision） */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_system_api_v1_systems__system_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                system_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemTestResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR：参数缺失或格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description UNAUTHENTICATED：未认证或凭据无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description NOT_FOUND：资源不存在（跨租户统一 404，不泄露存在性） */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

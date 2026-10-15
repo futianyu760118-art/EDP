@@ -36,6 +36,11 @@ class System(Base):
     type: Mapped[str] = mapped_column(Text, nullable=False)
     endpoint: Mapped[str | None] = mapped_column(Text)
     auth_config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    # 0019（V1.3 T50）：驱动配置（DB 拉取 dsn/tables）；非空 = 可装配真实适配器
+    adapter_config: Mapped[dict | None] = mapped_column(JSONB)
+    # 0019 起由 catalog 显式写入：有 adapter_config → 'real'，否则 'mock'
+    # （DDL 默认 'mock'；ingest 侧同名映射互不干扰）
+    adapter_mode: Mapped[str] = mapped_column(Text, nullable=False, default="mock")
     status: Mapped[str] = mapped_column(Text, nullable=False, default="ACTIVE")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

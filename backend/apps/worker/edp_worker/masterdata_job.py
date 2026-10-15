@@ -22,10 +22,11 @@ from dataclasses import dataclass
 from os import environ
 from uuid import UUID
 
+from edp_api.core.db import bind_tenant
 from edp_api.modules.adapters_admin import service as adapters_admin_service
 from edp_api.modules.ingest import service as ingest_service
 from edp_api.modules.quality.service import task_lock_key, try_acquire_task_lock
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 from edp_worker.scheduler import active_tenant_ids
 
@@ -63,16 +64,32 @@ async def run_masterdata_round(
     engine: AsyncEngine,
     tenant_ids: list[UUID],
     adapter_names: tuple[str, ...],
+    *,
+    resolve=None,
 ) -> int:
     """单轮：逐租户 × 逐适配器 incremental 同步（互斥 + 异常隔离）。
 
+    适配器解析（T50）：缺省走 adapters_admin——每租户先 refresh_dynamic
+    （catalog systems 行装配，RLS 天然隔离）再 get_adapter（动态优先、
+    静态 demo 回退）；``resolve`` 为测试注入缝（替身返回适配器对象）。
     返回成功执行的同步次数（跳过/失败不计）。
     """
     executed = 0
+    factory = async_sessionmaker(engine, expire_on_commit=False)
     for tenant_id in tenant_ids:
+        if resolve is None:
+            try:
+                async with factory() as sess:
+                    await bind_tenant(sess, tenant_id)
+                    await adapters_admin_service.refresh_dynamic(sess, tenant_id)
+            except Exception:  # noqa: BLE001 — 装配失败按全跳过处理
+                logger.exception("masterdata 适配器装配失败 tenant=%s", tenant_id)
         for name in adapter_names:
             try:
-                adapter = adapters_admin_service.get_adapter(name)
+                if resolve is None:
+                    adapter = adapters_admin_service.get_adapter(tenant_id, name)
+                else:
+                    adapter = await resolve(tenant_id, name)
             except LookupError:
                 logger.warning("masterdata 兜底适配器未注册，跳过：%s", name)
                 continue

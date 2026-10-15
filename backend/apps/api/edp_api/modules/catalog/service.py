@@ -17,7 +17,7 @@ tenant_scoped 预 bind_tenant；显式 tenant_id 条件双保险，跨租户读�
 事务边界：本层只 flush 不 commit——请求级提交由 core.db.get_db 统一执行。
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, func, or_, select
@@ -37,6 +37,7 @@ from edp_api.modules.catalog.schemas import (
     SkillListItem,
     SystemCreateRequest,
     SystemListItem,
+    SystemUpdateRequest,
 )
 
 DEFAULT_LIMIT = 20
@@ -64,7 +65,11 @@ async def _flush_unique(
 async def create_system(
     sess: AsyncSession, principal: Principal, req: SystemCreateRequest
 ) -> System:
-    """注册系统（B.7）；同名（本租户 uq_systems_name）→ 409。"""
+    """注册系统（B.7）；同名（本租户 uq_systems_name）→ 409。
+
+    T50：adapter_config 提供 → adapter_mode='real'（可装配真实适配器），
+    缺省保持 'mock'。
+    """
     system = System(
         system_id=uuid4(),
         tenant_id=principal.tenant_id,
@@ -72,6 +77,8 @@ async def create_system(
         type=req.type,
         endpoint=req.endpoint,
         auth_config=req.auth_config,
+        adapter_config=req.adapter_config,
+        adapter_mode="real" if req.adapter_config else "mock",
         status="ACTIVE",
         created_by=principal.id,
         updated_by=principal.id,
@@ -93,6 +100,48 @@ async def query_systems(
         sess, System, "system_id", conditions=conditions, limit=limit, cursor=cursor
     )
     return [SystemListItem.model_validate(row) for row in rows], next_cursor
+
+
+async def get_system(sess: AsyncSession, system_id: UUID) -> System | None:
+    """系统详情（RLS 会话：跨租户行不可见 → None，语义 404）。"""
+    return (
+        await sess.execute(select(System).where(System.system_id == system_id))
+    ).scalar_one_or_none()
+
+
+async def get_system_by_name(sess: AsyncSession, name: str) -> System | None:
+    """按名查系统（RLS 会话仅见本租户行；uq_systems_name 本租户唯一）。"""
+    return (
+        await sess.execute(select(System).where(System.name == name))
+    ).scalar_one_or_none()
+
+
+async def update_system(
+    sess: AsyncSession, principal: Principal, system: System, req: SystemUpdateRequest
+) -> System:
+    """局部更新（T50）：仅覆盖传入字段；adapter_config 变更同步
+    adapter_mode（None 清空 → 回 mock；提供 → real）。"""
+    if req.type is not None:
+        system.type = req.type
+    if req.endpoint is not None:
+        system.endpoint = req.endpoint
+    if req.auth_config is not None:
+        system.auth_config = req.auth_config
+    if "adapter_config" in req.model_fields_set:
+        system.adapter_config = req.adapter_config
+        system.adapter_mode = "real" if req.adapter_config else "mock"
+    if req.status is not None:
+        system.status = req.status
+    system.updated_by = principal.id
+    system.updated_at = datetime.now(UTC)  # 值赋值（func.now() 会触发 async 懒加载）
+    await sess.flush()
+    return system
+
+
+async def delete_system(sess: AsyncSession, system: System) -> None:
+    """删除系统行（调用方随后触发适配器注册表重载）。"""
+    await sess.delete(system)
+    await sess.flush()
 
 
 # ---- capabilities ----
