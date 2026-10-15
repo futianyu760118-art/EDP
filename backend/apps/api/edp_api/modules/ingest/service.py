@@ -47,6 +47,7 @@ FORCE RLS——调用方会话需已 bind_tenant（CLI/API 各自绑定；显式
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import json
@@ -424,7 +425,7 @@ async def process_record(
     return True
 
 
-def _fetch_records(
+async def _fetch_records(
     adapter: SourceAdapter,
     mode: SyncMode,
     watermark: datetime | None,
@@ -439,15 +440,20 @@ def _fetch_records(
       归一——naive 按 UTC 解释，前端 datetime-local 无时区值可直传）；
       其余语义同 full：UUIDv5 幂等 → 重放计 duplicated、不推 revision。
     未知模式抛 ValueError。
+
+    拉取经 asyncio.to_thread（V1.3 T49）：真实适配器（SPC 直连）在同步
+    协议 fetch_* 内做网络 IO——线程包裹避免阻塞事件循环；mock 零影响。
     """
     if mode == "full":
-        return adapter.fetch_full([], anchor=anchor)
+        return await asyncio.to_thread(adapter.fetch_full, [], anchor=anchor)
     if mode == "incremental":
-        return adapter.fetch_incremental(
-            watermark if watermark is not None else _EPOCH, anchor=anchor
+        return await asyncio.to_thread(
+            adapter.fetch_incremental,
+            watermark if watermark is not None else _EPOCH,
+            anchor=anchor,
         )
     if mode == "replay":
-        records = adapter.fetch_full([], anchor=anchor)
+        records = await asyncio.to_thread(adapter.fetch_full, [], anchor=anchor)
         if since is None:
             return records
         cutoff = normalize_occurred_at(since)
@@ -480,7 +486,7 @@ async def run_sync(
         system = await _find_system(sess, tenant_id, adapter.name)
         watermark = system.last_watermark if system is not None else None
         anchor = await tenantmgmt_service.get_demo_anchor(sess, tenant_id)
-        records = _fetch_records(adapter, mode, watermark, anchor, since)
+        records = await _fetch_records(adapter, mode, watermark, anchor, since)
 
         stats = SyncStats(fetched=len(records))
         latest = watermark
@@ -535,7 +541,7 @@ async def run_sync_per_record(
             watermark = await get_watermark(sess, tenant_id, adapter.name)
             anchor = await tenantmgmt_service.get_demo_anchor(sess, tenant_id)
 
-        records = _fetch_records(adapter, mode, watermark, anchor, since)
+        records = await _fetch_records(adapter, mode, watermark, anchor, since)
 
         stats = SyncStats(fetched=len(records))
         latest = watermark

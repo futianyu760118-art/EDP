@@ -35,6 +35,7 @@ import asyncio
 import logging
 from dataclasses import asdict
 from datetime import UTC, datetime
+from os import environ
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -44,6 +45,7 @@ from edp_adapters import (
     DemoMesAdapter,
     DemoPlmAdapter,
     ErpMockAdapter,
+    SpcPullAdapter,
 )
 from sqlalchemy import and_, or_, select
 
@@ -91,13 +93,17 @@ _STATUS_TEXT: dict[str, str] = {"RUNNING": "运行中", "SUCCEEDED": "空闲", "
 _HEALTH_TEXT: dict[bool, str] = {True: "OK", False: "DEGRADED"}
 
 # 进程内注册表：erp（W2 基线）+ erp-demo/plm-demo/mes-demo（W3 演示数据集，
-# T6 + EDP-017 剩余）；清单显示四行（list 按名称升序：
-# erp / erp-demo / mes-demo / plm-demo）
+# T6 + EDP-017 剩余）；清单显示按名称升序：erp / erp-demo / mes-demo / plm-demo
+# （+ spc：EDP_SPC_DB_URL 配置时条件注册——V1.3 T49 真实供应链拉取适配器，
+# 主数据兜底轨；未配置环境（CI/无对端）不出现）
 _registry = AdapterRegistry()
 _registry.register(ErpMockAdapter())
 _registry.register(DemoErpAdapter())
 _registry.register(DemoPlmAdapter())
 _registry.register(DemoMesAdapter())
+_SPC_DSN = environ.get("EDP_SPC_DB_URL", "").strip()
+if _SPC_DSN:
+    _registry.register(SpcPullAdapter(dsn=_SPC_DSN))
 
 # create_task 强引用防 GC（官方建议模式；完成回调自清理）
 _tasks: set[asyncio.Task[None]] = set()

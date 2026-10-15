@@ -100,14 +100,32 @@ services:
   worker:
     environment:
       # worker 容器经 compose 内网连 kafka（INTERNAL listener kafka:29092）；
-      # 宿主进程联调用 localhost:9092（HOST listener 端口映射）
+      # 宿主进程联调用 localhost:9092（HOST listener 端口映射）。
+      # 路由：本地 scm demo 1 条 + 真实 SPC 演练（spc_test）7 条（T42 回执白名单
+      # 在 spc_test 实际存在的表；owner_domain 映射见 docs/V1.3_对端条件清单.md）
       EDP_STREAM_KAFKA_BOOTSTRAP: kafka:29092
       EDP_STREAM_ROUTES: >
         [{"topic": "edp.default.scm.orders", "source_system": "scm",
           "pk_columns": ["order_no"], "owner_domain": "sales",
-          "object_type": "ORDER", "tenant": "default"}]
+          "object_type": "ORDER", "tenant": "default"},
+         {"topic": "edp.default.spc.sale_order", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "sales", "tenant": "default"},
+         {"topic": "edp.default.spc.sale_order_line", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "sales", "tenant": "default"},
+         {"topic": "edp.default.spc.production_task_order", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "production", "tenant": "default"},
+         {"topic": "edp.default.spc.production_order_schedule_snapshot", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "production", "tenant": "default"},
+         {"topic": "edp.default.spc.process_progress", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "production", "tenant": "default"},
+         {"topic": "edp.default.spc.scm_inventory", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "delivery", "tenant": "default"},
+         {"topic": "edp.default.spc.purchase_order", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "procurement", "tenant": "default"}]
       EDP_STREAM_GROUP: edp-worker
-      EDP_MASTERDATA_ADAPTERS: "erp-demo,plm-demo"
+      # T49：SPC 主数据拉取兜底（演练连 spc_test；生产换 spc_db + scm_cdc 账号）
+      EDP_SPC_DB_URL: postgresql://root:u0yZXCVD~BhxnrFt2Pjo@150.158.13.110:15432/spc_test
+      EDP_MASTERDATA_ADAPTERS: "erp-demo,plm-demo,spc"
       EDP_MASTERDATA_INTERVAL_S: "3600"
 
 volumes:

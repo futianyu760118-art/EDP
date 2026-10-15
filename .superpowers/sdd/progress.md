@@ -471,3 +471,23 @@ schema-gate 14/14；alembic 0018 up→down→up 循环（一次性容器）通�
 4. stream 管道失败头部阻塞重试——同分区跳位会致重启丢消息，吞吐让位于不丢不重；
 5. masterdata 兜底不落 ops.tasks 行——先日志可观测，任务轨道随 worker 调度改造评估；
 6. T28/T29/T31 延续待外部资源（ERP/MES 字段清单/只读账号），本会话未触碰。
+
+---
+
+# SDD Progress Ledger — EDP V1.3 T49（真实 SPC 拉取连接器，回执 SPC-V2-INT-EDP-01 触发）
+
+Spec: 行动计划 V1.3 T49 + docs/V1.3_对端条件清单.md
+Branch: feat/v13-realtime（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T49 | DONE（dev/演练级） | edp_adapters/spc_pull.py + ingest 拉取线程化 + adapters_admin 条件注册 + compose 接线 | 10 张 C.2 表规格；update_time 增量列（非 updated_at）；scm_process/scm_organization 全量（纪元常量 occurred_at 确定性重放）；敏感列 SQL 级排除（contact_person/contact_phone/fax/address/credit_code）；asyncpg 经 asyncio.run（ingest 侧 to_thread 包裹）；EPOCH 水位 datetime.min astimezone 溢出降级；单测 11 + 集成 3（第二 PG 源库容器）；spc_test 实跑 2 租户×3 对象 |
+
+验证：backend 全量 **784 passed**（770 基线 + 14：单测 11 + 集成 3）；ruff / lint-imports 绿。
+
+关键裁定（记入偏差）：
+1. 真实适配器（同步协议 + 网络 IO）不阻塞事件循环——ingest._fetch_records 经 asyncio.to_thread 包裹（mock 零影响，既有 9 管道测试回归锁定）；
+2. asyncpg 参数编码 datetime.min（_EPOCH 水位哨兵）报「aware/naive 相减」——适配器 _naive_utc 归一 + astimezone 溢出降级；
+3. payload JSON 归一（datetime→isoformat/Decimal→str）在适配器层完成——真实适配器必须输出 JSON 原生值（mock 天然满足，管道契约隐含要求）；
+4. 缺表容忍：对端演练库缺表时跳过不报错（生产库 10 张齐后自动生效）；
+5. 踩坑警示：PowerShell Set-Content -Encoding UTF8（PS5.1 带 BOM）曾两次写坏 Python 源文件——统一改由 edit/write 工具或 Python 写文件。

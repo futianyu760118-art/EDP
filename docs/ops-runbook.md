@@ -113,6 +113,36 @@
   via='capture'，RAW batch_id=`capture:{topic}:{partition}:{offset}`）；
   双轨对账：`uv run python -m edp_api.modules.ingest.cli reconcile-capture
   --capture-source scm`。
+- **真实对端（SPC 回执 2026-10-15）**：生产实例 `150.158.13.110:15432`
+  （PG 15.19，库 spc_db；**内网 192.168.0.127 勿接**）；演练先连同实例
+  `spc_test` 库——Connector 配置与 dev 栈仅差 `database.hostname/
+  port/dbname/user/password`；对端条件与白名单状态见
+  docs/V1.3_对端条件清单.md（CDC 11 张 + 拉取 10 张，增量列
+  `update_time`，敏感字段排除清单）；slot 槽名 `edp_debezium_scm`，
+  对端已设 `max_slot_wal_keep_size=20GB` 硬上限。
+- **⚠️ topic 预建（空表陷阱，2026-10-15 演练实测）**：白名单中的空表
+  不产生快照记录→topic 不存在→aiokafka 订阅等待全部 topic 元数据，
+  **消费整体阻塞**（worker 日志刷 `Topic ... not found`）。部署清单：
+  Connector 注册**前**按路由清单预建全部 topic（broker 已关自动创建）：
+
+  ```powershell
+  docker exec edp-dev-kafka-1 kafka-topics --bootstrap-server kafka:29092 `
+    --create --topic edp.default.spc.sale_order --partitions 1 --replication-factor 1
+  # …逐 topic 预建；演练实际存在的 7 张见 docker-compose.realtime.yml 路由
+  ```
+
+- **演练实测记录（2026-10-15，spc_test）**：快照 4 条（SALE_ORDER×2 +
+  SALE_ORDER_LINE×2）与流式 UPDATE（status open→SHIPPED、金额
+  decimal 字符串无损）均入 EDP——revision 递增、via='capture'、RAW
+  坐标血缘、位点推进；演练槽名 `edp_debezium_spc_test`（与生产槽
+  `edp_debezium_scm` 区分）。
+- **T49 SPC 主数据拉取（2026-10-15 上线演练栈）**：worker 环境
+  `EDP_SPC_DB_URL`（演练 spc_test；生产换 spc_db + scm_cdc 账号）+
+  `EDP_MASTERDATA_ADAPTERS` 含 `spc`（适配器条件注册，未配置不出现）；
+  10 张主数据表增量列名 `update_time`（scm_warehouse/location 为
+  updated_at，scm_process/organization 全量纪元常量重放幂等）；敏感列
+  SQL 级排除（scm_supplier 联系方式四列 / scm_customer.credit_code）；
+  适配器拉取经 to_thread 不阻塞事件循环。
 - **位点事实来源 = PG**（realtime.stream_offsets；Kafka 不 commit）——
   消费重启用库内位点 seek；重置消费：删对应 (consumer_group, topic) 行。
 - **故障处置**：
