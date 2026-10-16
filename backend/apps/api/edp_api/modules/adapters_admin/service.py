@@ -107,13 +107,21 @@ _registry.register(DemoMesAdapter())
 
 # (tenant_id, name) → DbPullAdapter（进程内装配缓存；refresh 按租户替换）
 _dynamic: dict[tuple[UUID, str], DbPullAdapter] = {}
-# (tenant_id, name) → catalog systems 行 id（前端编辑/删除入口用）
+# (tenant_id, name) → catalog systems 行 id（前端编辑/删除入口用）——
+# 含已注册未装配（无 adapter_config）的 SOURCE 系统
 _dynamic_system_ids: dict[tuple[UUID, str], UUID] = {}
 
-_DYNAMIC_SQL = text("""
-    SELECT system_id, name, adapter_config FROM platform.systems
-    WHERE status = 'ACTIVE' AND adapter_config IS NOT NULL
+# 已注册未装配名（catalog ACTIVE SOURCE 且 adapter_config 缺失/非法）：
+# 清单可见（mode=unconfigured），但不进 get_adapter（sync/status 404 语义）
+_unconfigured: set[tuple[UUID, str]] = set()
+
+_SYSTEMS_SQL = text("""
+    SELECT system_id, name, type, adapter_config FROM platform.systems
+    WHERE status = 'ACTIVE' AND type = 'SOURCE'
 """)
+
+UNCONFIGURED_MODE = "unconfigured"
+UNCONFIGURED_TEXT = "未配置"
 
 
 def build_adapter_from_config(
@@ -155,24 +163,35 @@ async def refresh_dynamic(sess: AsyncSession, tenant_id: UUID) -> None:
     """按租户重载动态适配器（RLS 会话仅见本租户 systems 行——天然隔离）。
 
     catalog CRUD 收尾 / worker 每轮调用；本租户既有装配全量替换（删除的
-    配置随之下线）。
+    配置随之下线）。三类去向：adapter_config 可装配 → _dynamic（real）；
+    缺失/非法 → _unconfigured（清单可见不可同步）；其余（CONSUMER 等）
+    不进适配器清单。
     """
-    rows = (await sess.execute(_DYNAMIC_SQL)).mappings().all()
+    rows = (await sess.execute(_SYSTEMS_SQL)).mappings().all()
     rebuilt: dict[tuple[UUID, str], DbPullAdapter] = {
         key: adapter for key, adapter in _dynamic.items() if key[0] != tenant_id
     }
     rebuilt_ids: dict[tuple[UUID, str], UUID] = {
         key: sid for key, sid in _dynamic_system_ids.items() if key[0] != tenant_id
     }
+    unconfigured: set[tuple[UUID, str]] = {
+        key for key in _unconfigured if key[0] != tenant_id
+    }
     for row in rows:
+        key = (tenant_id, row["name"])
         adapter = build_adapter_from_config(row["name"], row["adapter_config"])
         if adapter is not None:
-            rebuilt[(tenant_id, row["name"])] = adapter
-            rebuilt_ids[(tenant_id, row["name"])] = row["system_id"]
+            rebuilt[key] = adapter
+            rebuilt_ids[key] = row["system_id"]
+        else:
+            unconfigured.add(key)
+            rebuilt_ids[key] = row["system_id"]
     _dynamic.clear()
     _dynamic.update(rebuilt)
     _dynamic_system_ids.clear()
     _dynamic_system_ids.update(rebuilt_ids)
+    _unconfigured.clear()
+    _unconfigured.update(unconfigured)
 
 
 def get_adapter(tenant_id: UUID, adapter_name: str) -> SourceAdapter:
@@ -489,22 +508,40 @@ def _parse_anchor(decoded: dict) -> tuple[datetime, UUID] | None:
 async def list_adapters(
     sess: AsyncSession, tenant_id: UUID
 ) -> list[AdapterListItem]:
-    """清单行：静态注册表 + 本租户动态装配（mode real/mock）+ 任务状态 +
-    last_sync_at=水位（动态适配器同步后 systems 行水位）。"""
+    """清单行：静态注册表 + 本租户 catalog SOURCE 系统（已装配 mode=real
+    / 未装配 mode=unconfigured）+ 任务状态 + last_sync_at=水位。
+
+    未装配行不探活（无适配器对象）：health/status 均「未配置」；同步/
+    状态/日志端点对其 404（get_adapter LookupError）。"""
     await refresh_dynamic(sess, tenant_id)
     items: list[AdapterListItem] = []
-    names = sorted(set(_registry.list()) | {name for (tid, name) in _dynamic if tid == tenant_id})
+    names = sorted(
+        set(_registry.list())
+        | {name for (tid, name) in _dynamic if tid == tenant_id}
+        | {name for (tid, name) in _unconfigured if tid == tenant_id}
+    )
     for name in names:
-        adapter = get_adapter(tenant_id, name)
         task = await latest_task(sess, name)
         status = _STATUS_TEXT[task.status] if task is not None else "空闲"
         watermark = await ingest_service.get_watermark(sess, tenant_id, name)
+        if is_dynamic(tenant_id, name):
+            adapter = get_adapter(tenant_id, name)
+            mode = "real"
+            health = await probe_health(adapter)
+        elif (tenant_id, name) in _unconfigured:
+            mode = UNCONFIGURED_MODE
+            status = UNCONFIGURED_TEXT
+            health = UNCONFIGURED_TEXT
+        else:
+            adapter = get_adapter(tenant_id, name)
+            mode = ADAPTER_MODE_MOCK
+            health = await probe_health(adapter)
         items.append(
             AdapterListItem(
                 adapter=name,
-                mode="real" if is_dynamic(tenant_id, name) else ADAPTER_MODE_MOCK,
+                mode=mode,
                 status=status,
-                health=await probe_health(adapter),
+                health=health,
                 last_sync_at=watermark,
                 system_id=_dynamic_system_ids.get((tenant_id, name)),
             )

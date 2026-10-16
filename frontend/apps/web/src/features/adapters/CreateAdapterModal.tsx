@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ModalForm } from "../../components/ModalForm";
 import { SYSTEM_TYPE_OPTIONS, type SystemAuthConfig } from "./api";
+import { TableSpecEditor, type TableSpecRow } from "./TableSpecEditor";
 import { useCreateSystem } from "./hooks";
 
 export interface CreateAdapterModalProps {
@@ -30,7 +31,7 @@ export function CreateAdapterModal({ open, onClose }: CreateAdapterModalProps) {
   const [secretRef, setSecretRef] = useState("");
   const [channel, setChannel] = useState<"REST" | "DB_PULL">("REST");
   const [dsn, setDsn] = useState("");
-  const [tablesJson, setTablesJson] = useState("");
+  const [tableSpecs, setTableSpecs] = useState<TableSpecRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const createSystem = useCreateSystem();
 
@@ -44,7 +45,7 @@ export function CreateAdapterModal({ open, onClose }: CreateAdapterModalProps) {
     setSecretRef("");
     setChannel("REST");
     setDsn("");
-    setTablesJson("");
+    setTableSpecs([]);
     setError(null);
   }, [open]);
 
@@ -63,17 +64,26 @@ export function CreateAdapterModal({ open, onClose }: CreateAdapterModalProps) {
         setError("请输入数据库连接串（DSN）");
         return;
       }
-      let tables: unknown;
-      try {
-        tables = JSON.parse(tablesJson.trim() || "[]");
-      } catch {
-        setError("表配置不是合法 JSON");
+      const filled = tableSpecs.filter((r) => r.table.trim());
+      if (filled.length === 0) {
+        setError("请至少添加一张表配置");
         return;
       }
-      if (!Array.isArray(tables) || tables.length === 0) {
-        setError("表配置至少一条：[{table, increment_column?, owner_domain?, excluded_columns?}]");
-        return;
-      }
+      const tables = filled.map((r) => ({
+        table: r.table.trim(),
+        ...(r.increment_column.trim()
+          ? { increment_column: r.increment_column.trim() }
+          : { increment_column: null }),
+        owner_domain: r.owner_domain.trim() || "master",
+        ...(r.excluded_columns.trim()
+          ? {
+              excluded_columns: r.excluded_columns
+                .split(",")
+                .map((c) => c.trim())
+                .filter(Boolean),
+            }
+          : { excluded_columns: [] }),
+      }));
       adapterConfig = { dsn: dsn.trim(), tables };
     }
 
@@ -192,21 +202,10 @@ export function CreateAdapterModal({ open, onClose }: CreateAdapterModalProps) {
                   />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">表配置（JSON）</div>
-                  <textarea
-                    data-dom-id="adapter-tables-json"
-                    aria-label="表配置 JSON"
-                    rows={5}
-                    placeholder={'[{"table":"scm_material","increment_column":"update_time",\n  "owner_domain":"master","excluded_columns":["contact_phone"]}]'}
-                    value={tablesJson}
-                    onChange={(e) => {
-                      setTablesJson(e.target.value);
-                      setError(null);
-                    }}
-                    className="w-full px-3 py-2 text-xs font-mono bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent resize-y"
-                  />
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">表配置</div>
+                  <TableSpecEditor rows={tableSpecs} onChange={setTableSpecs} />
                   <p className="mt-1 text-[10px] text-muted-foreground">
-                    increment_column 缺省全量拉取；excluded_columns 为敏感列 SQL 级排除。
+                    增量列留空 = 全量拉取；排除列为敏感列 SQL 级排除。
                   </p>
                 </div>
               </>

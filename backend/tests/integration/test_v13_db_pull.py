@@ -10,6 +10,8 @@
 5. 增量列名 update_time（非 updated_at）适配。
 """
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from edp_adapters.db_pull import DbPullAdapter, DbTableSpec
 from edp_api.modules.ingest import service as ingest_service
@@ -195,7 +197,11 @@ async def test_full_pull_registers_and_excludes_sensitive(
 async def test_incremental_update_time_semantics(
     spc_dsn: str, app_role_engine: AsyncEngine, db_session: AsyncSession
 ) -> None:
-    """增量列是 update_time：未变 duplicated；bump 后新 revision。"""
+    """增量列是 update_time：未变 duplicated；bump 后新 revision。
+
+    bump 时间戳取动态未来值（供应商行 update_time=now() 参与水位——
+    固定过去时间戳在跨日后会被水位吞掉，历史教训见 ledger）。
+    """
     import asyncpg
 
     tenant_id = await _tenant_id(db_session)
@@ -210,11 +216,13 @@ async def test_incremental_update_time_semantics(
     assert stats2.registered == 0
 
     # bump M-1 的 update_time → 增量拉到 → revision 2
+    bump_ts = datetime.now(UTC) + timedelta(hours=1)
     conn = await asyncpg.connect(spc_dsn)
     try:
         await conn.execute(
-            "UPDATE scm_material SET name='防松螺母', update_time='2026-10-15 09:00:00+00'"
-            " WHERE code='M-1'"
+            "UPDATE scm_material SET name='防松螺母', update_time=$1"
+            " WHERE code='M-1'",
+            bump_ts,
         )
     finally:
         await conn.close()

@@ -95,9 +95,9 @@ export const adapterHandlers = [
     if (scenario) return scenario;
     const dynamicRows = [...registeredSystems.values()].map((s) => ({
       adapter: s.name,
-      mode: s.adapter_config ? "real" : "mock",
-      status: "空闲",
-      health: "OK",
+      mode: s.adapter_config ? "real" : "unconfigured",
+      status: s.adapter_config ? "空闲" : "未配置",
+      health: s.adapter_config ? "OK" : "未配置",
       last_sync_at: null,
       system_id: s.system_id,
     }));

@@ -145,7 +145,7 @@ async def _create(factory, tenant_id, dsn: str):
             _principal(tenant_id),
             SystemCreateRequest(
                 name=ADAPTER_NAME,
-                type="DB_PULL",
+                type="SOURCE",
                 adapter_config=_config(
                     dsn,
                     [{"table": "vendor", "increment_column": "updated_at",
@@ -250,3 +250,61 @@ async def test_tenant_isolation_of_dynamic_adapters(
     # 他租户装配不到（进程内无该键 + RLS 查询也取不到本租户行）
     with pytest.raises(LookupError):
         adapters_service.get_adapter(other_tenant, ADAPTER_NAME)
+
+
+async def test_unconfigured_system_visible_then_upgraded(
+    source_dsn: str, app_role_engine: AsyncEngine, db_session: AsyncSession
+) -> None:
+    """REST 通道注册（无 adapter_config）→ 清单可见（mode=unconfigured、
+    sync 404）→ PUT 配置 → 转 real 可同步。"""
+    tenant_id = await _tenant_id(db_session)
+    factory = async_sessionmaker(app_role_engine, expire_on_commit=False)
+
+    # 注册无配置系统
+    async with factory() as sess:
+        await bind_tenant(sess, tenant_id)
+        await catalog_service.create_system(
+            sess,
+            _principal(tenant_id),
+            SystemCreateRequest(name=ADAPTER_NAME, type="SOURCE", endpoint="https://x/api"),
+        )
+        await adapters_service.refresh_dynamic(sess, tenant_id)
+        await sess.commit()
+
+    async with factory() as sess:
+        await bind_tenant(sess, tenant_id)
+        items = await adapters_service.list_adapters(sess, tenant_id)
+    row = next(item for item in items if item.adapter == ADAPTER_NAME)
+    assert row.mode == "unconfigured"
+    assert row.status == "未配置"
+    assert row.health == "未配置"
+    assert row.system_id is not None
+
+    # 未装配不可同步（404 语义）
+    with pytest.raises(LookupError):
+        adapters_service.get_adapter(tenant_id, ADAPTER_NAME)
+
+    # PUT 配置 → 转 real
+    async with factory() as sess:
+        await bind_tenant(sess, tenant_id)
+        system = await catalog_service.get_system_by_name(sess, ADAPTER_NAME)
+        await catalog_service.update_system(
+            sess,
+            _principal(tenant_id),
+            system,
+            SystemUpdateRequest(
+                adapter_config=_config(
+                    source_dsn, [{"table": "vendor", "increment_column": "updated_at"}]
+                )
+            ),
+        )
+        await adapters_service.refresh_dynamic(sess, tenant_id)
+        await sess.commit()
+
+    adapter = adapters_service.get_adapter(tenant_id, ADAPTER_NAME)
+    assert adapter is not None
+    async with factory() as sess:
+        await bind_tenant(sess, tenant_id)
+        items = await adapters_service.list_adapters(sess, tenant_id)
+    row = next(item for item in items if item.adapter == ADAPTER_NAME)
+    assert row.mode == "real"

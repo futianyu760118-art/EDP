@@ -4,6 +4,7 @@ import { errorSpec } from "@edp/shared";
 import { useEffect, useState } from "react";
 import { ModalForm } from "../../components/ModalForm";
 import { SYSTEM_TYPE_OPTIONS, type SystemAuthConfig } from "./api";
+import { TableSpecEditor, type TableSpecRow } from "./TableSpecEditor";
 import { useSystem, useUpdateSystem } from "./hooks";
 
 export interface EditAdapterModalProps {
@@ -12,9 +13,45 @@ export interface EditAdapterModalProps {
   onClose: () => void;
 }
 
+function toSpecRows(tables: unknown): TableSpecRow[] {
+  if (!Array.isArray(tables)) return [];
+  return tables.map((item) => {
+    const t = item as Record<string, unknown>;
+    return {
+      table: String(t.table ?? ""),
+      increment_column: t.increment_column ? String(t.increment_column) : "",
+      owner_domain: t.owner_domain ? String(t.owner_domain) : "master",
+      excluded_columns: Array.isArray(t.excluded_columns)
+        ? t.excluded_columns.join(", ")
+        : "",
+    };
+  });
+}
+
+function toTables(rows: TableSpecRow[]) {
+  return rows
+    .filter((r) => r.table.trim())
+    .map((r) => ({
+      table: r.table.trim(),
+      ...(r.increment_column.trim()
+        ? { increment_column: r.increment_column.trim() }
+        : { increment_column: null }),
+      owner_domain: r.owner_domain.trim() || "master",
+      ...(r.excluded_columns.trim()
+        ? {
+            excluded_columns: r.excluded_columns
+              .split(",")
+              .map((c) => c.trim())
+              .filter(Boolean),
+          }
+        : { excluded_columns: [] }),
+    }));
+}
+
 /**
  * 编辑适配器弹窗（V1.3 T50）：GET /systems/{id} 预填 → PUT 局部更新。
- * 名称（注册键）只读；接入方式 / DSN / 表配置 / Endpoint / 认证引用可改。
+ * 名称（注册键）只读；接入方式 / DSN / 表配置（逐表结构化编辑）/
+ * Endpoint / 认证引用可改。
  */
 export function EditAdapterModal({ open, systemId, onClose }: EditAdapterModalProps) {
   const system = useSystem(open ? systemId ?? undefined : undefined);
@@ -24,19 +61,19 @@ export function EditAdapterModal({ open, systemId, onClose }: EditAdapterModalPr
   const [endpoint, setEndpoint] = useState("");
   const [channel, setChannel] = useState<"REST" | "DB_PULL">("REST");
   const [dsn, setDsn] = useState("");
-  const [tablesJson, setTablesJson] = useState("");
+  const [tableSpecs, setTableSpecs] = useState<TableSpecRow[]>([]);
   const [secretRef, setSecretRef] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !system.data) return;
-    const cfg = system.data.adapter_config;
+    const cfg = system.data.adapter_config as { dsn?: string; tables?: unknown } | null;
     const auth = system.data.auth_config as SystemAuthConfig | undefined;
     setType(system.data.type);
     setEndpoint(system.data.endpoint ?? "");
     setChannel(cfg?.dsn ? "DB_PULL" : "REST");
-    setDsn((cfg?.dsn as string | undefined) ?? "");
-    setTablesJson(cfg?.tables ? JSON.stringify(cfg.tables, null, 2) : "");
+    setDsn(cfg?.dsn ?? "");
+    setTableSpecs(toSpecRows(cfg?.tables));
     setSecretRef(auth?.secret_ref ?? "");
     setError(null);
   }, [open, system.data]);
@@ -48,20 +85,13 @@ export function EditAdapterModal({ open, systemId, onClose }: EditAdapterModalPr
         setError("请输入数据库连接串（DSN）");
         return;
       }
-      let tables: unknown;
-      try {
-        tables = JSON.parse(tablesJson.trim() || "[]");
-      } catch {
-        setError("表配置不是合法 JSON");
+      if (!tableSpecs.some((r) => r.table.trim())) {
+        setError("请至少添加一张表配置");
         return;
       }
-      if (!Array.isArray(tables) || tables.length === 0) {
-        setError("表配置至少一条：[{table, increment_column?, owner_domain?, excluded_columns?}]");
-        return;
-      }
-      adapterConfig = { dsn: dsn.trim(), tables };
+      adapterConfig = { dsn: dsn.trim(), tables: toTables(tableSpecs) };
     } else if (channel === "REST") {
-      adapterConfig = null; // 显式清空驱动配置（回退 mock 语义）
+      adapterConfig = null; // 显式清空驱动配置（回退未装配语义）
     }
 
     setError(null);
@@ -178,18 +208,11 @@ export function EditAdapterModal({ open, systemId, onClose }: EditAdapterModalPr
                     />
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">表配置（JSON）</div>
-                    <textarea
-                      data-dom-id="adapter-edit-tables-json"
-                      aria-label="表配置 JSON"
-                      rows={6}
-                      value={tablesJson}
-                      onChange={(e) => {
-                        setTablesJson(e.target.value);
-                        setError(null);
-                      }}
-                      className="w-full px-3 py-2 text-xs font-mono bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent resize-y"
-                    />
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">表配置</div>
+                    <TableSpecEditor rows={tableSpecs} onChange={setTableSpecs} />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      增量列留空 = 全量拉取；排除列为敏感列 SQL 级排除。
+                    </p>
                   </div>
                 </>
               )}

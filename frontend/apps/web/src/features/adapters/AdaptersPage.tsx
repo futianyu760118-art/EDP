@@ -152,26 +152,38 @@ export function AdaptersPage() {
                     <td className="px-4 py-3">
                       <StatusPill tone={statusTone(row.status)} label={row.status} size="sm" />
                     </td>
-                    <td className="px-4 py-3 font-mono">{row.mode}</td>
+                    <td className="px-4 py-3">
+                      {row.mode === "unconfigured" ? (
+                        <StatusPill tone="warning" label="未配置" size="sm" />
+                      ) : row.mode === "real" ? (
+                        <StatusPill tone="success" label="real" size="sm" />
+                      ) : (
+                        <span className="font-mono">{row.mode}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button
-                        type="button"
-                        data-dom-id={`adapter-test-${row.adapter}`}
-                        onClick={() => openTest(row.adapter)}
-                        className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted flex items-center gap-1"
-                      >
-                        <Plug className="w-3 h-3" aria-hidden="true" />
-                        测试连接
-                      </button>
-                      <button
-                        type="button"
-                        data-dom-id={`adapter-log-${row.adapter}`}
-                        onClick={() => openLog(row.adapter)}
-                        className="ml-1.5 text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted inline-flex items-center gap-1"
-                      >
-                        <ScrollText className="w-3 h-3" aria-hidden="true" />
-                        日志
-                      </button>
+                      {row.mode !== "unconfigured" && (
+                        <>
+                          <button
+                            type="button"
+                            data-dom-id={`adapter-test-${row.adapter}`}
+                            onClick={() => openTest(row.adapter)}
+                            className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted flex items-center gap-1"
+                          >
+                            <Plug className="w-3 h-3" aria-hidden="true" />
+                            测试连接
+                          </button>
+                          <button
+                            type="button"
+                            data-dom-id={`adapter-log-${row.adapter}`}
+                            onClick={() => openLog(row.adapter)}
+                            className="ml-1.5 text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted inline-flex items-center gap-1"
+                          >
+                            <ScrollText className="w-3 h-3" aria-hidden="true" />
+                            日志
+                          </button>
+                        </>
+                      )}
                       {row.system_id != null && (
                         <>
                           <button
