@@ -8,7 +8,7 @@ idempotency_keys）；ORM 不参与迁移。users / api_keys / idempotency_keys
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Text, Uuid, func
+from sqlalchemy import Boolean, DateTime, Text, Uuid, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -24,16 +24,17 @@ class User(Base):
     __table_args__ = {"schema": "platform"}
 
     user_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
-    tenant_id: Mapped[UUID] = mapped_column(
-        Uuid, ForeignKey("platform.tenants.tenant_id"), nullable=False
-    )
+    # 不声明 ForeignKey（沿袭约定：DDL 单一事实来源 = 迁移；本模块
+    # metadata 无 tenants/organizations 表——声明会在 flush 触发全局
+    # mapper 配置时 NoReferencedTableError）
+    tenant_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     username: Mapped[str] = mapped_column(Text, nullable=False)
     email: Mapped[str] = mapped_column(Text, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     display_name: Mapped[str] = mapped_column(Text, nullable=False)
-    org_id: Mapped[UUID | None] = mapped_column(
-        Uuid, ForeignKey("platform.organizations.org_id")
-    )
+    # 不声明 ForeignKey（沿袭约定：DDL 单一事实来源 = 迁移；声明会要求
+    # organizations 表入本模块 metadata，懒配置时 NoReferencedTableError）
+    org_id: Mapped[UUID | None] = mapped_column(Uuid)
     principal_type: Mapped[str] = mapped_column(
         Text, nullable=False, default="HUMAN"
     )
@@ -80,9 +81,8 @@ class ApiKey(Base):
 
     key_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     key_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    tenant_id: Mapped[UUID] = mapped_column(
-        Uuid, ForeignKey("platform.tenants.tenant_id"), nullable=False
-    )
+    # 不声明 ForeignKey（同 users.tenant_id 约定）
+    tenant_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     principal_type: Mapped[str] = mapped_column(
         Text, nullable=False, default="SERVICE"
     )

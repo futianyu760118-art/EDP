@@ -32,6 +32,7 @@ run_sync_per_record 逐条隔离（failed+1），仅整批级异常才置 FAILED
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -40,12 +41,14 @@ from uuid import UUID, uuid4
 
 from edp_adapters import (
     AdapterRegistry,
+    DbPullAdapter,
+    DbTableSpec,
     DemoErpAdapter,
     DemoMesAdapter,
     DemoPlmAdapter,
     ErpMockAdapter,
 )
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, text
 
 from edp_api.core import db as core_db
 from edp_api.core.pagination import decode_cursor, encode_cursor
@@ -91,21 +94,121 @@ _STATUS_TEXT: dict[str, str] = {"RUNNING": "运行中", "SUCCEEDED": "空闲", "
 _HEALTH_TEXT: dict[bool, str] = {True: "OK", False: "DEGRADED"}
 
 # 进程内注册表：erp（W2 基线）+ erp-demo/plm-demo/mes-demo（W3 演示数据集，
-# T6 + EDP-017 剩余）；清单显示四行（list 按名称升序：
-# erp / erp-demo / mes-demo / plm-demo）
+# T6 + EDP-017 剩余）——静态注册（demo/mock，无租户语义）；
+# 动态适配器（V1.3 T50）：catalog systems 行（adapter_config 非空）装配为
+# DbPullAdapter，键 (tenant_id, name)——RLS 下每租户各自装配，跨租户同名
+# 配置互不干扰（uq_systems_name 为 (tenant_id, name)）。装配来源
+# refresh_dynamic（catalog CRUD 后 / worker 每轮调用）。
 _registry = AdapterRegistry()
 _registry.register(ErpMockAdapter())
 _registry.register(DemoErpAdapter())
 _registry.register(DemoPlmAdapter())
 _registry.register(DemoMesAdapter())
 
+# (tenant_id, name) → DbPullAdapter（进程内装配缓存；refresh 按租户替换）
+_dynamic: dict[tuple[UUID, str], DbPullAdapter] = {}
+# (tenant_id, name) → catalog systems 行 id（前端编辑/删除入口用）——
+# 含已注册未装配（无 adapter_config）的 SOURCE 系统
+_dynamic_system_ids: dict[tuple[UUID, str], UUID] = {}
+
+# 已注册未装配名（catalog ACTIVE SOURCE 且 adapter_config 缺失/非法）：
+# 清单可见（mode=unconfigured），但不进 get_adapter（sync/status 404 语义）
+_unconfigured: set[tuple[UUID, str]] = set()
+
+_SYSTEMS_SQL = text("""
+    SELECT system_id, name, type, adapter_config FROM platform.systems
+    WHERE status = 'ACTIVE' AND type = 'SOURCE'
+""")
+
+UNCONFIGURED_MODE = "unconfigured"
+UNCONFIGURED_TEXT = "未配置"
+
+
+def build_adapter_from_config(
+    name: str, adapter_config: dict | str | None
+) -> DbPullAdapter | None:
+    """adapter_config → DbPullAdapter；缺 dsn/tables 或条目非法 → None。
+
+    原生 SQL 驱动（asyncpg）jsonb 返回 JSON 文本；ORM 返回 dict——两种
+    形态均归一。tables 条目：table（必填）/ increment_column（缺省 None
+    全量）/ owner_domain（缺省 master）/ excluded_columns（缺省空）。
+    """
+    if isinstance(adapter_config, str):
+        try:
+            adapter_config = json.loads(adapter_config)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(adapter_config, dict):
+        return None
+    dsn = adapter_config.get("dsn")
+    tables = adapter_config.get("tables")
+    if not dsn or not isinstance(tables, list) or not tables:
+        return None
+    specs: list[DbTableSpec] = []
+    for item in tables:
+        if not isinstance(item, dict) or not item.get("table"):
+            return None
+        specs.append(
+            DbTableSpec(
+                table=item["table"],
+                increment_column=item.get("increment_column"),
+                owner_domain=item.get("owner_domain") or "master",
+                excluded_columns=tuple(item.get("excluded_columns") or ()),
+            )
+        )
+    return DbPullAdapter(name=name, dsn=dsn, table_specs=specs)
+
+
+async def refresh_dynamic(sess: AsyncSession, tenant_id: UUID) -> None:
+    """按租户重载动态适配器（RLS 会话仅见本租户 systems 行——天然隔离）。
+
+    catalog CRUD 收尾 / worker 每轮调用；本租户既有装配全量替换（删除的
+    配置随之下线）。三类去向：adapter_config 可装配 → _dynamic（real）；
+    缺失/非法 → _unconfigured（清单可见不可同步）；其余（CONSUMER 等）
+    不进适配器清单。
+    """
+    rows = (await sess.execute(_SYSTEMS_SQL)).mappings().all()
+    rebuilt: dict[tuple[UUID, str], DbPullAdapter] = {
+        key: adapter for key, adapter in _dynamic.items() if key[0] != tenant_id
+    }
+    rebuilt_ids: dict[tuple[UUID, str], UUID] = {
+        key: sid for key, sid in _dynamic_system_ids.items() if key[0] != tenant_id
+    }
+    unconfigured: set[tuple[UUID, str]] = {
+        key for key in _unconfigured if key[0] != tenant_id
+    }
+    for row in rows:
+        key = (tenant_id, row["name"])
+        adapter = build_adapter_from_config(row["name"], row["adapter_config"])
+        if adapter is not None:
+            rebuilt[key] = adapter
+            rebuilt_ids[key] = row["system_id"]
+        else:
+            unconfigured.add(key)
+            rebuilt_ids[key] = row["system_id"]
+    _dynamic.clear()
+    _dynamic.update(rebuilt)
+    _dynamic_system_ids.clear()
+    _dynamic_system_ids.update(rebuilt_ids)
+    _unconfigured.clear()
+    _unconfigured.update(unconfigured)
+
+
+def get_adapter(tenant_id: UUID, adapter_name: str) -> SourceAdapter:
+    """(租户, 名) 查询：动态（真实装配）优先，静态（demo/mock）回退；
+    未注册 → LookupError（router 转 404）。"""
+    adapter = _dynamic.get((tenant_id, adapter_name))
+    if adapter is not None:
+        return adapter
+    return _registry.get(adapter_name)
+
+
+def is_dynamic(tenant_id: UUID, adapter_name: str) -> bool:
+    """该适配器是否 DB 装配（清单 mode 展示 real/mock 用）。"""
+    return (tenant_id, adapter_name) in _dynamic
+
 # create_task 强引用防 GC（官方建议模式；完成回调自清理）
 _tasks: set[asyncio.Task[None]] = set()
-
-
-def get_adapter(adapter_name: str) -> SourceAdapter:
-    """注册表查询；未注册 → LookupError（router 转 404）。"""
-    return _registry.get(adapter_name)
 
 
 async def latest_task(sess: AsyncSession, adapter_name: str) -> OpsTask | None:
@@ -141,8 +244,12 @@ async def trigger_sync(
     行随请求事务落库（审计 TASK_CREATE 同事务派生）；后台先等行可见再
     执行（见 ``_run``）。since 仅 replay 语义消费（重放窗口下界），其余
     模式透传忽略。
+
+    T50：触发前 refresh_dynamic 装配本租户动态适配器（catalog 行；RLS
+    会话仅见本租户配置）。
     """
-    adapter = get_adapter(adapter_name)  # LookupError → router 转 404
+    await refresh_dynamic(sess, tenant_id)
+    adapter = get_adapter(tenant_id, adapter_name)  # LookupError → router 转 404
     mutex = await try_acquire_task_lock(
         task_lock_key(ADAPTER_TASK_TYPE, ref_name=adapter_name)
     )
@@ -308,23 +415,31 @@ def _summary_from(task: OpsTask) -> LastSyncSummary:
     )
 
 
+async def probe_health(adapter: SourceAdapter) -> str:
+    """适配器探活（T50）：真实适配器 health_check 内跑 asyncio.run（线程
+    契约）——请求上下文经 to_thread 调用；返回 _HEALTH_TEXT 键。"""
+    health = await asyncio.to_thread(adapter.health_check)
+    return _HEALTH_TEXT[health.ok]
+
+
 async def adapter_status(
-    sess: AsyncSession, adapter_name: str
+    sess: AsyncSession, tenant_id: UUID, adapter_name: str
 ) -> AdapterStatusResponse:
     """status 端点组装：注册表适配器 + 最近任务行 + 探活（未跑过 last_sync=null）。"""
-    adapter = get_adapter(adapter_name)  # LookupError → router 转 404
+    adapter = get_adapter(tenant_id, adapter_name)  # LookupError → router 转 404
     task = await latest_task(sess, adapter_name)
     last_sync = _summary_from(task) if task is not None else None
     return AdapterStatusResponse(
         adapter=adapter_name,
-        mode=ADAPTER_MODE_MOCK,
+        mode="real" if is_dynamic(tenant_id, adapter_name) else ADAPTER_MODE_MOCK,
         last_sync=last_sync,
-        health=_HEALTH_TEXT[adapter.health_check().ok],
+        health=await probe_health(adapter),
     )
 
 
 async def list_jobs(
     sess: AsyncSession,
+    tenant_id: UUID,
     adapter_name: str,
     *,
     limit: int = DEFAULT_JOBS_LIMIT,
@@ -333,7 +448,7 @@ async def list_jobs(
     """适配器同步任务历史（ops.tasks；W3-41/42 jobs 语义收口）：游标分页
     started_at DESC + task_id DESC tiebreak，锚 ``{"s","i"}``；取 limit+1
     探测下一页；非法 cursor 视为首页。"""
-    get_adapter(adapter_name)  # LookupError → router 转 404
+    get_adapter(tenant_id, adapter_name)  # LookupError → router 转 404
     limit = max(1, min(limit, MAX_JOBS_LIMIT))
     stmt = select(OpsTask).where(
         OpsTask.task_type == ADAPTER_TASK_TYPE,
@@ -393,20 +508,42 @@ def _parse_anchor(decoded: dict) -> tuple[datetime, UUID] | None:
 async def list_adapters(
     sess: AsyncSession, tenant_id: UUID
 ) -> list[AdapterListItem]:
-    """清单行：注册表适配器 + mode=mock + 任务状态文案 + last_sync_at=水位。"""
+    """清单行：静态注册表 + 本租户 catalog SOURCE 系统（已装配 mode=real
+    / 未装配 mode=unconfigured）+ 任务状态 + last_sync_at=水位。
+
+    未装配行不探活（无适配器对象）：health/status 均「未配置」；同步/
+    状态/日志端点对其 404（get_adapter LookupError）。"""
+    await refresh_dynamic(sess, tenant_id)
     items: list[AdapterListItem] = []
-    for name in _registry.list():
-        adapter = _registry.get(name)
+    names = sorted(
+        set(_registry.list())
+        | {name for (tid, name) in _dynamic if tid == tenant_id}
+        | {name for (tid, name) in _unconfigured if tid == tenant_id}
+    )
+    for name in names:
         task = await latest_task(sess, name)
         status = _STATUS_TEXT[task.status] if task is not None else "空闲"
         watermark = await ingest_service.get_watermark(sess, tenant_id, name)
+        if is_dynamic(tenant_id, name):
+            adapter = get_adapter(tenant_id, name)
+            mode = "real"
+            health = await probe_health(adapter)
+        elif (tenant_id, name) in _unconfigured:
+            mode = UNCONFIGURED_MODE
+            status = UNCONFIGURED_TEXT
+            health = UNCONFIGURED_TEXT
+        else:
+            adapter = get_adapter(tenant_id, name)
+            mode = ADAPTER_MODE_MOCK
+            health = await probe_health(adapter)
         items.append(
             AdapterListItem(
                 adapter=name,
-                mode=ADAPTER_MODE_MOCK,
+                mode=mode,
                 status=status,
-                health=_HEALTH_TEXT[adapter.health_check().ok],
+                health=health,
                 last_sync_at=watermark,
+                system_id=_dynamic_system_ids.get((tenant_id, name)),
             )
         )
     return items

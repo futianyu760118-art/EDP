@@ -26,12 +26,16 @@ CapabilityPermission = Literal["HUMAN_ONLY", "READ_ONLY", "AUTO_ALLOWED"]
 
 
 class SystemCreateRequest(BaseModel):
-    """POST /systems 请求（B.7）。"""
+    """POST /systems 请求（B.7 + V1.3 T50 adapter_config 扩展）。"""
 
     name: str = Field(min_length=1, max_length=128)
     type: str = Field(min_length=1, max_length=64)
     endpoint: str | None = Field(default=None, max_length=512)
     auth_config: dict[str, Any] = Field(default_factory=dict)
+    adapter_config: dict[str, Any] | None = Field(
+        default=None,
+        description="驱动配置（DB 拉取：dsn + tables 表规格列表）；提供即装配真实适配器",
+    )
 
 
 class SystemCreatedResponse(BaseModel):
@@ -44,7 +48,7 @@ class SystemCreatedResponse(BaseModel):
 
 
 class SystemListItem(BaseModel):
-    """GET /systems 列表项（B.7 简投影）。"""
+    """GET /systems 列表项（B.7 简投影 + T50 adapter_mode）。"""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -52,8 +56,43 @@ class SystemListItem(BaseModel):
     name: str
     type: str
     endpoint: str | None
+    adapter_mode: str | None = None
     status: str
     created_at: datetime
+
+
+class SystemResponse(BaseModel):
+    """GET/PUT /systems/{id} 完整对象（含驱动配置，管理页编辑用）。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    system_id: UUID
+    name: str
+    type: str
+    endpoint: str | None
+    auth_config: dict[str, Any]
+    adapter_config: dict[str, Any] | None
+    adapter_mode: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class SystemUpdateRequest(BaseModel):
+    """PUT /systems/{id} 局部更新（仅传入字段覆盖）。"""
+
+    type: str | None = Field(default=None, min_length=1, max_length=64)
+    endpoint: str | None = Field(default=None, max_length=512)
+    auth_config: dict[str, Any] | None = None
+    adapter_config: dict[str, Any] | None = None
+    status: SystemStatus | None = None
+
+
+class SystemTestResponse(BaseModel):
+    """POST /systems/{id}/test 响应（探活结果）。"""
+
+    ok: bool
+    detail: str
 
 
 class CapabilityCreateRequest(BaseModel):

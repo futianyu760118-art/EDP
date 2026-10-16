@@ -16,6 +16,7 @@ router 级挂 tenant_scoped（认证 → 租户状态 → bind_tenant → RLS）
 单独挂鉴权依赖以取回 Principal。
 """
 
+import asyncio
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -26,6 +27,7 @@ from edp_api.core.db import get_db
 from edp_api.core.errors import EdpError, ErrorCode, error_responses
 from edp_api.core.pagination import Page
 from edp_api.core.security.principal import Principal
+from edp_api.modules.adapters_admin import service as adapters_admin_service
 from edp_api.modules.catalog import service as catalog_service
 from edp_api.modules.catalog.dependencies import require_read, require_write
 from edp_api.modules.catalog.schemas import (
@@ -40,6 +42,9 @@ from edp_api.modules.catalog.schemas import (
     SystemCreatedResponse,
     SystemCreateRequest,
     SystemListItem,
+    SystemResponse,
+    SystemTestResponse,
+    SystemUpdateRequest,
 )
 from edp_api.modules.tenantmgmt.dependencies import tenant_scoped
 
@@ -76,6 +81,7 @@ async def create_system(
 ) -> SystemCreatedResponse:
     """注册系统 → 201；同名（本租户 uq_systems_name）→ 409 CONFLICT。"""
     system = await catalog_service.create_system(sess, principal, payload)
+    await adapters_admin_service.refresh_dynamic(sess, principal.tenant_id)
     return SystemCreatedResponse(
         system_id=system.system_id,
         name=system.name,
@@ -108,6 +114,92 @@ async def list_systems(
         sess, status=status_filter, limit=limit, cursor=cursor
     )
     return Page(items=items, next_cursor=next_cursor)
+
+
+@router.get(
+    "/systems/{system_id}",
+    response_model=SystemResponse,
+    summary="系统详情（含驱动配置，管理页编辑用）",
+    responses=error_responses(*_READ_ERRORS, ErrorCode.NOT_FOUND),
+)
+async def get_system(
+    system_id: UUID,
+    principal: Annotated[Principal, Depends(require_read())],
+    sess: DbSession,
+) -> SystemResponse:
+    """RLS 会话：跨租户行不可见 → 404（与不存在同义）。"""
+    system = await catalog_service.get_system(sess, system_id)
+    if system is None:
+        raise EdpError.not_found("系统不存在")
+    return SystemResponse.model_validate(system)
+
+
+@router.put(
+    "/systems/{system_id}",
+    response_model=SystemResponse,
+    summary="更新系统（局部更新：type/endpoint/auth/adapter_config/status）",
+    responses=error_responses(*_WRITE_ERRORS, ErrorCode.NOT_FOUND),
+)
+async def update_system(
+    system_id: UUID,
+    payload: SystemUpdateRequest,
+    principal: Annotated[Principal, Depends(require_write())],
+    sess: DbSession,
+) -> SystemResponse:
+    """adapter_config 变更同步 adapter_mode（real/mock）。"""
+    system = await catalog_service.get_system(sess, system_id)
+    if system is None:
+        raise EdpError.not_found("系统不存在")
+    updated = await catalog_service.update_system(sess, principal, system, payload)
+    await adapters_admin_service.refresh_dynamic(sess, principal.tenant_id)
+    return SystemResponse.model_validate(updated)
+
+
+@router.delete(
+    "/systems/{system_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="删除系统（含其驱动配置）",
+    responses=error_responses(*_WRITE_ERRORS, ErrorCode.NOT_FOUND),
+)
+async def delete_system(
+    system_id: UUID,
+    principal: Annotated[Principal, Depends(require_write())],
+    sess: DbSession,
+) -> None:
+    """删除注册行（适配器注册表随事务收尾重载，见 adapters_admin）。"""
+    system = await catalog_service.get_system(sess, system_id)
+    if system is None:
+        raise EdpError.not_found("系统不存在")
+    await catalog_service.delete_system(sess, system)
+    await adapters_admin_service.refresh_dynamic(sess, principal.tenant_id)
+
+
+@router.post(
+    "/systems/{system_id}/test",
+    response_model=SystemTestResponse,
+    summary="测试连接（驱动配置装配 + 探活，只读）",
+    responses=error_responses(*_WRITE_ERRORS, ErrorCode.NOT_FOUND),
+)
+async def test_system(
+    system_id: UUID,
+    principal: Annotated[Principal, Depends(require_write())],
+    sess: DbSession,
+) -> SystemTestResponse:
+    """adapter_config 装配为 DbPullAdapter 后探活（SELECT 1，超时 5s）；
+    无驱动配置 → 400 VALIDATION_ERROR。"""
+    system = await catalog_service.get_system(sess, system_id)
+    if system is None:
+        raise EdpError.not_found("系统不存在")
+    if not system.adapter_config:
+        raise EdpError.validation_error("该系统无驱动配置（adapter_config）")
+    adapter = adapters_admin_service.build_adapter_from_config(
+        system.name, system.adapter_config
+    )
+    if adapter is None:
+        raise EdpError.validation_error("adapter_config 非法：需 dsn 与 tables 列表")
+    # 真实适配器 health_check 内跑 asyncio.run（线程契约）——to_thread 包裹
+    health = await asyncio.to_thread(adapter.health_check)
+    return SystemTestResponse(ok=health.ok, detail=health.detail)
 
 
 # ---- capabilities ----

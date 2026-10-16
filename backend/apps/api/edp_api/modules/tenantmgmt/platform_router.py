@@ -69,7 +69,8 @@ async def create_tenant(
 ) -> TenantCreateResponse:
     """单事务开通：tenants(ACTIVE) + tenant_quotas（PLAN_QUOTAS[plan]）+
     初始管理员 users + tenant_members(ADMIN)；请求未携带 admin.password 时
-    响应回传一次性临时口令（B.14 扩展）。slug 冲突 → 409。"""
+    响应回传一次性临时口令（B.14 扩展）。租户编码服务端自动生成
+    （ten-YYYY-NNNN，next_tenant_code 原子取号）；编码撞号 → 409（防御）。"""
     tenant, admin_user, temporary_password = await tenantmgmt_service.create_tenant(
         sess, payload, principal.id
     )

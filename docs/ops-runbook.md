@@ -61,3 +61,124 @@
   闭环五组）；docs/V1.2_门禁复检与验收标准核对.md（21 项核对）。
 - **已知偏差**：tools official_only 过渡期开关（official_only=false）；
   CSV 通道仅 CSV（xlsx 先另存）；value ledger 复用 metric 权限轨道。
+
+---
+
+## V1.3 新增运维面（实时链路，2026-10 迭代）
+
+- **schema**：realtime(2 表：stream_offsets 位点 / stream_dlq 死信，
+  **无 RLS**——平台基础设施坐标，裁定见 0018 迁移 docstring)；迁移 0018。
+- **worker 三常驻**：outbox + admission + `stream_consume.stream_loop`
+  （EDP_STREAM_KAFKA_BOOTSTRAP 未配置即不启用）+ `masterdata_job`
+  主数据兜底（EDP_MASTERDATA_ADAPTERS 未配置即不启用）。
+- **dev 起栈**（可选叠加，不进默认 compose）：
+
+  ```powershell
+  docker compose -f deploy/docker-compose.dev.yml `
+    -f deploy/docker-compose.realtime.yml up -d --build
+  sh deploy/migrate.sh   # 0018 realtime schema 随全量迁移
+  ```
+
+- **注册 Debezium Connector**（connect 就绪后一次性；实测调优项已并入：
+  RegexRouter 去 schema 段对齐 topic 规范、`schemas.enable=true` 契约信封、
+  `decimal.handling.mode=string` 数值可读化、账号需 REPLICATION 属性——
+  pg-init-realtime 已带，真实对端见对端条件清单风险项）：
+
+  ```powershell
+  curl -X PUT http://localhost:8083/connectors/edp-scm-source/config `
+    -H "Content-Type: application/json" -d @- <<EOF
+  {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "scm-db", "database.port": "5432",
+    "database.user": "scm_cdc", "database.password": "scm_cdc_dev",
+    "database.dbname": "scm", "topic.prefix": "edp.default.scm",
+    "publication.name": "scm_pub", "plugin.name": "pgoutput",
+    "slot.name": "edp_debezium_scm", "snapshot.mode": "initial",
+    "topic.creation.default.replication.factor": 1,
+    "topic.creation.default.partitions": 1,
+    "transforms": "dropSchema",
+    "transforms.dropSchema.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.dropSchema.regex": "edp\\\\.default\\\\.scm\\\\.public\\\\.(.*)",
+    "transforms.dropSchema.replacement": "edp.default.scm.$1",
+    "decimal.handling.mode": "string",
+    "time.precision.mode": "connect"
+  }
+  EOF
+  ```
+
+  topic 命名：Debezium 缺省输出 `{prefix}.{schema}.{table}`（含 public 段），
+  RegexRouter 重写为契约规范 `edp.default.scm.{table}`；白名单对齐
+  docs/V1.3_对端条件清单.md。
+- **验证消费**：scm-db 插一行 orders → 秒级出现在 EDP（对象/事件/证据
+  via='capture'，RAW batch_id=`capture:{topic}:{partition}:{offset}`）；
+  双轨对账：`uv run python -m edp_api.modules.ingest.cli reconcile-capture
+  --capture-source scm`。
+- **真实对端（SPC 回执 2026-10-15）**：生产实例 `150.158.13.110:15432`
+  （PG 15.19，库 spc_db；**内网 192.168.0.127 勿接**）；演练先连同实例
+  `spc_test` 库——Connector 配置与 dev 栈仅差 `database.hostname/
+  port/dbname/user/password`；对端条件与白名单状态见
+  docs/V1.3_对端条件清单.md（CDC 11 张 + 拉取 10 张，增量列
+  `update_time`，敏感字段排除清单）；slot 槽名 `edp_debezium_scm`，
+  对端已设 `max_slot_wal_keep_size=20GB` 硬上限。
+- **⚠️ topic 预建（空表陷阱，2026-10-15 演练实测）**：白名单中的空表
+  不产生快照记录→topic 不存在→aiokafka 订阅等待全部 topic 元数据，
+  **消费整体阻塞**（worker 日志刷 `Topic ... not found`）。部署清单：
+  Connector 注册**前**按路由清单预建全部 topic（broker 已关自动创建）：
+
+  ```powershell
+  docker exec edp-dev-kafka-1 kafka-topics --bootstrap-server kafka:29092 `
+    --create --topic edp.default.spc.sale_order --partitions 1 --replication-factor 1
+  # …逐 topic 预建；演练实际存在的 7 张见 docker-compose.realtime.yml 路由
+  ```
+
+- **演练实测记录（2026-10-15，spc_test）**：快照 4 条（SALE_ORDER×2 +
+  SALE_ORDER_LINE×2）与流式 UPDATE（status open→SHIPPED、金额
+  decimal 字符串无损）均入 EDP——revision 递增、via='capture'、RAW
+  坐标血缘、位点推进；演练槽名 `edp_debezium_spc_test`（与生产槽
+  `edp_debezium_scm` 区分）。
+- **T49 SPC 主数据拉取（2026-10-15 上线演练栈）**：适配器经 catalog
+  `POST /systems`（adapter_config）+ `EDP_MASTERDATA_ADAPTERS` 含 `spc`；
+  10 张主数据表增量列名 `update_time`（scm_warehouse/location 为
+  updated_at，scm_process/organization 全量纪元常量重放幂等）；敏感列
+  SQL 级排除（scm_supplier 联系方式四列 / scm_customer.credit_code）；
+  适配器拉取经 to_thread 不阻塞事件循环。
+- **T50 适配器 CRUD（前端可配置化，2026-10-15）**：不再用
+  `EDP_SPC_DB_URL` env——适配器 = catalog systems 行（adapter_config
+  非空即装配为 DbPullAdapter，键 (tenant, name)，RLS 天然隔离）。API：
+
+  ```powershell
+  # 注册（201）/ 更新（PUT /systems/{id}）/ 删除（DELETE /systems/{id}）/
+  # 测试连接（POST /systems/{id}/test）；同名 409
+  curl -X POST http://localhost:18000/api/v1/systems -H "Authorization: Bearer $TOKEN" `
+    -H "Content-Type: application/json" -d '{
+      "name": "spc", "type": "DB_PULL",
+      "adapter_config": {
+        "dsn": "postgresql://scm_cdc:***@150.158.13.110:15432/spc_db",
+        "tables": [{"table": "scm_material", "increment_column": "update_time",
+                    "owner_domain": "master", "excluded_columns": []}]
+      }}'
+  ```
+
+  前端适配器页「新增适配器」已带 接入方式（REST/DB_PULL）+ DSN + 表配置
+  JSON；worker 主数据兜底每轮从 systems 表装配（缓存随 refresh_dynamic）。
+  注意：DSN 含明文口令（dev 演练可接受；生产建议 secret 注入评审）。
+- **个人设置（V1.3 T51）**：PUT /auth/profile（display_name/email）+
+  POST /auth/change-password（旧密不匹配 400——会话内校验语义；强度：
+  ≥8 位含字母数字且异于旧密）；审计 AUTH_PROFILE_UPDATE /
+  AUTH_PASSWORD_CHANGE；前端 /profile 四卡（资料/改密/主题/会话权限）。
+- **位点事实来源 = PG**（realtime.stream_offsets；Kafka 不 commit）——
+  消费重启用库内位点 seek；重置消费：删对应 (consumer_group, topic) 行。
+- **故障处置**：
+  - 毒消息（解析失败）→ realtime.stream_dlq（error 列含原因；按坐标
+    修数后可重发，重放走幂等）；
+  - 管道失败重试风暴（retried 持续增长）→ 看 edp.worker.stream 日志；
+    头部阻塞是设计行为（不丢不重优先）；
+  - slot 堆积（G5 告警）→ 先看消费延迟（updated_at 落后），必要时
+    扩 worker 或暂停实时轨回退拉取兜底；
+  - broker 不可达 → stream_loop 启动/运行均有退避重试（2s 起指数，
+    上限 15s），恢复自动续传。
+- **监控判据（G5）**：端到端 P99、0 重复（duplicated 收敛口径）、
+  对账偏差 0、slot 堆积无积压、源库负载不超标（基线随 T48 压测定）。
+- **已知偏差**：Debezium Connector 本体不在 CI（testcontainers 信封
+  直注覆盖消费侧；Connector 由 dev compose/运维验证）；masterdata 兜底
+  不落 ops.tasks 行（日志可观测，任务轨道后续评估）。

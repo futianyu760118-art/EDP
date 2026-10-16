@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/realtime/debezium-event.schema.json",
+  "title": "Realtime CDC 变更事件契约（Debezium 信封子集）",
+  "description": "V1.3 实时链路（T44）消费侧接受的 Debezium 事件信封最小子集与映射语义：payload.after → SourceRecord.payload；payload.ts_ms（源库事务提交时刻，毫秒纪元）→ occurred_at（禁止消费侧 now()）；payload.source.table → object_type（大写化，须匹配 ^[A-Z][A-Z0-9_]{0,63}$）；主键列值（路由配置 pk_columns）→ source_id（须匹配 ^[A-Za-z0-9][A-Za-z0-9._:@#/-]{0,127}$）。op=r/c/u 为可处理快照语义（upsert 管道）；op=d 与 tombstone（payload.after 为 null）不产生记录（对象层为 upsert-only，删除语义后续阶段另行裁决）。信封外层 schema 字段（Avro/JSON 转换器附带的 schema 描述）允许存在且被忽略。",
+  "type": "object",
+  "required": ["payload"],
+  "properties": {
+    "schema": {
+      "type": ["object", "null"],
+      "description": "转换器附带 schema 描述（忽略）"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["op", "ts_ms", "source"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["c", "r", "u", "d"],
+          "description": "c=create / r=snapshot read / u=update / d=delete"
+        },
+        "ts_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "源库事务提交时刻（毫秒纪元，UTC）——occurred_at 唯一来源"
+        },
+        "source": {
+          "type": "object",
+          "required": ["table"],
+          "properties": {
+            "db": { "type": "string" },
+            "schema": { "type": "string" },
+            "table": {
+              "type": "string",
+              "minLength": 1,
+              "description": "源表名——object_type 派生来源"
+            }
+          },
+          "additionalProperties": true
+        },
+        "before": {
+          "type": ["object", "null"],
+          "description": "变更前镜像（快照/创建事件为 null；当前管道不消费，留作对账扩展）"
+        },
+        "after": {
+          "type": ["object", "null"],
+          "description": "变更后镜像——SourceRecord.payload 来源；op=d 或 tombstone 时为 null"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

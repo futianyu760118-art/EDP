@@ -1,11 +1,12 @@
 import { Skeleton } from "antd";
-import { EmptyState, StatusPill } from "@edp/shared";
-import { Cable, Plug, Plus, RefreshCw, ScrollText } from "lucide-react";
+import { DangerConfirm, EmptyState, StatusPill } from "@edp/shared";
+import { Cable, Pencil, Plug, Plus, RefreshCw, ScrollText, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { relTime } from "../../lib/labels";
-import { useAdapters } from "./hooks";
+import { useAdapters, useDeleteSystem } from "./hooks";
 import type { AdapterRow } from "./api";
 import { CreateAdapterModal } from "./CreateAdapterModal";
+import { EditAdapterModal } from "./EditAdapterModal";
 import { TestConnectionModal } from "./TestConnectionModal";
 import { ConnectWizard } from "./ConnectWizard";
 import { SyncLogDrawer } from "./SyncLogDrawer";
@@ -32,12 +33,15 @@ function statusTone(status: string): "success" | "warning" | "error" | "muted" {
  */
 export function AdaptersPage() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [editSystemId, setEditSystemId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<AdapterRow | null>(null);
   const [testOpen, setTestOpen] = useState(false);
   const [testTarget, setTestTarget] = useState<string | undefined>(undefined);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [logAdapter, setLogAdapter] = useState<string | undefined>(undefined);
   const [logOpen, setLogOpen] = useState(false);
   const adaptersQuery = useAdapters();
+  const deleteSystem = useDeleteSystem();
   const rows = adaptersQuery.data?.items ?? [];
 
   const openTest = (adapter?: string) => {
@@ -48,6 +52,18 @@ export function AdaptersPage() {
   const openLog = (adapter: string) => {
     setLogAdapter(adapter);
     setLogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleting?.system_id) return;
+    deleteSystem.mutate(deleting.system_id, {
+      onSuccess: () => {
+        setDeleting(null);
+      },
+      onError: () => {
+        setDeleting(null);
+      },
+    });
   };
 
   return (
@@ -136,26 +152,60 @@ export function AdaptersPage() {
                     <td className="px-4 py-3">
                       <StatusPill tone={statusTone(row.status)} label={row.status} size="sm" />
                     </td>
-                    <td className="px-4 py-3 font-mono">{row.mode}</td>
+                    <td className="px-4 py-3">
+                      {row.mode === "unconfigured" ? (
+                        <StatusPill tone="warning" label="未配置" size="sm" />
+                      ) : row.mode === "real" ? (
+                        <StatusPill tone="success" label="real" size="sm" />
+                      ) : (
+                        <span className="font-mono">{row.mode}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button
-                        type="button"
-                        data-dom-id={`adapter-test-${row.adapter}`}
-                        onClick={() => openTest(row.adapter)}
-                        className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted flex items-center gap-1"
-                      >
-                        <Plug className="w-3 h-3" aria-hidden="true" />
-                        测试连接
-                      </button>
-                      <button
-                        type="button"
-                        data-dom-id={`adapter-log-${row.adapter}`}
-                        onClick={() => openLog(row.adapter)}
-                        className="ml-1.5 text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted inline-flex items-center gap-1"
-                      >
-                        <ScrollText className="w-3 h-3" aria-hidden="true" />
-                        日志
-                      </button>
+                      {row.mode !== "unconfigured" && (
+                        <>
+                          <button
+                            type="button"
+                            data-dom-id={`adapter-test-${row.adapter}`}
+                            onClick={() => openTest(row.adapter)}
+                            className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted flex items-center gap-1"
+                          >
+                            <Plug className="w-3 h-3" aria-hidden="true" />
+                            测试连接
+                          </button>
+                          <button
+                            type="button"
+                            data-dom-id={`adapter-log-${row.adapter}`}
+                            onClick={() => openLog(row.adapter)}
+                            className="ml-1.5 text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted inline-flex items-center gap-1"
+                          >
+                            <ScrollText className="w-3 h-3" aria-hidden="true" />
+                            日志
+                          </button>
+                        </>
+                      )}
+                      {row.system_id != null && (
+                        <>
+                          <button
+                            type="button"
+                            data-dom-id={`adapter-edit-${row.adapter}`}
+                            onClick={() => setEditSystemId(row.system_id ?? null)}
+                            className="ml-1.5 text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted inline-flex items-center gap-1"
+                          >
+                            <Pencil className="w-3 h-3" aria-hidden="true" />
+                            编辑
+                          </button>
+                          <button
+                            type="button"
+                            data-dom-id={`adapter-delete-${row.adapter}`}
+                            onClick={() => setDeleting(row)}
+                            className="ml-1.5 text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted inline-flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" aria-hidden="true" />
+                            删除
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -171,6 +221,25 @@ export function AdaptersPage() {
       )}
 
       <CreateAdapterModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <EditAdapterModal
+        open={editSystemId != null}
+        systemId={editSystemId}
+        onClose={() => setEditSystemId(null)}
+      />
+      <DangerConfirm
+        open={deleting != null}
+        title="删除适配器"
+        description={
+          <>
+            确定删除适配器「{deleting?.adapter}」？删除后其驱动配置与水位登记一并移除，操作不可恢复。
+          </>
+        }
+        objectName={deleting?.adapter}
+        confirmText="删除适配器"
+        loading={deleteSystem.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
       <TestConnectionModal
         open={testOpen}
         initialAdapter={testTarget}

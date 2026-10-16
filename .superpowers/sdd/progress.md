@@ -442,3 +442,96 @@ Branch: feat/v12-governance（续用）
 V1.2 迭代收官状态：40 任务完成 35；T28/T29（真实 ERP/MES 连接器）与 T31
 （真实数据抽样）依赖外部对接资源；T35~T40 以 mock+CSV 先行完成，真实数据
 UAT 待连接器就绪后复跑。
+
+---
+
+# SDD Progress Ledger — EDP V1.3 实时链路（CDC+Kafka，T41~T48 无外部依赖部分）
+
+Spec: docs/AEOS_企业数据与证据中台_EDP_迭代行动计划_V1.3.md + 总体方案 V1.3（C17~C22）
+Branch: feat/v13-realtime（worktree 数据平台-v13）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T41 | DONE（待签） | docs/V1.3_解冻裁决.md | V13-UNFREEZE-01：仅 Kafka+Debezium 解冻，蔓延防线/回退条款/签字栏 |
+| T42 | DONE（dev 基线） | docs/V1.3_对端条件清单.md + deploy/pg-init-realtime/01-scm-baseline.sql | wal_level=logical + scm_pub + scm_cdc 只读账号 + 白表种子；真实对端确认待 DBA |
+| T43 | DONE（dev 基线） | deploy/docker-compose.realtime.yml + ops-runbook V1.3 节 | scm-db/kafka(KRaft)/connect(debezium 2.7.2) 可选叠加；Connector 注册命令入 runbook；真实环境部署归运维 |
+| T44 | DONE | contracts/realtime/debezium-event.schema.json + edp_adapters/stream.py + 迁移 0018 + edp_worker/stream_consume.py | 契约 gate 14/14；parse 14 单测（op=d/tombstone→None；ts_ms 时间语义；pattern 校验）；realtime.stream_offsets/stream_dlq（无 RLS 裁定）；消费者 PG 位点事实源（rebalance listener seek）、DLQ 坐标唯一、启动/管道双退避、头部阻塞重试 |
+| T45 | DONE | process_record(via, batch_id) 通道标记 | 事件 data/审计 detail via='capture'；RAW batch_id=capture:{topic}:{p}:{o}（血缘可定位 Kafka 坐标）；缺省 'pipeline' 语义零变更 |
+| T46 | DONE | edp_worker/masterdata_job.py | 逐租户×适配器 incremental；与 API 触发 sync 同键 advisory lock 互斥；7 单测 |
+| T47 | DONE | ingest.reconcile_capture + CLI reconcile-capture | 拉取轨全集 vs via='capture' 事件计数，按 object_type 逐行 ok；CLI 子命令 + 2 集成测试 |
+| T48 | DONE（dev/CI 级） | tests/integration/test_v13_realtime_e2e.py | 真实 KafkaContainer 全链：3 注册/1 DLQ/位点推进、幂等重放 duplicated 收敛、断点续传 seek 不丢不重；真实 Debezium/真实源库 P99 待 T42/T43 真实环境补验 |
+
+验证：backend 全量 **770 passed**（725 基线 + 45：单测 36 + 集成 9）；ruff / lint-imports 绿；
+schema-gate 14/14；alembic 0018 up→down→up 循环（一次性容器）通过。
+
+关键裁定（记入偏差）：
+1. realtime.* 不启用 RLS——基础设施坐标表（位点/死信），无业务租户语义（0018 docstring + 方案 V1.3 §2.2 注）；
+2. Debezium Connector 本体不进 CI——消费侧以契约信封直注覆盖（e2e），Connector 部署件由 dev compose/runbook 验证；
+3. aiokafka 0.14「start 后 subscribe」触发 fetcher assignment 断言竞态——订阅先于 start（stream_consume 注释）；
+4. stream 管道失败头部阻塞重试——同分区跳位会致重启丢消息，吞吐让位于不丢不重；
+5. masterdata 兜底不落 ops.tasks 行——先日志可观测，任务轨道随 worker 调度改造评估；
+6. T28/T29/T31 延续待外部资源（ERP/MES 字段清单/只读账号），本会话未触碰。
+
+---
+
+# SDD Progress Ledger — EDP V1.3 T49（真实 SPC 拉取连接器，回执 SPC-V2-INT-EDP-01 触发）
+
+Spec: 行动计划 V1.3 T49 + docs/V1.3_对端条件清单.md
+Branch: feat/v13-realtime（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T49 | DONE（dev/演练级） | edp_adapters/spc_pull.py + ingest 拉取线程化 + adapters_admin 条件注册 + compose 接线 | 10 张 C.2 表规格；update_time 增量列（非 updated_at）；scm_process/scm_organization 全量（纪元常量 occurred_at 确定性重放）；敏感列 SQL 级排除（contact_person/contact_phone/fax/address/credit_code）；asyncpg 经 asyncio.run（ingest 侧 to_thread 包裹）；EPOCH 水位 datetime.min astimezone 溢出降级；单测 11 + 集成 3（第二 PG 源库容器）；spc_test 实跑 2 租户×3 对象 |
+
+验证：backend 全量 **784 passed**（770 基线 + 14：单测 11 + 集成 3）；ruff / lint-imports 绿。
+
+关键裁定（记入偏差）：
+1. 真实适配器（同步协议 + 网络 IO）不阻塞事件循环——ingest._fetch_records 经 asyncio.to_thread 包裹（mock 零影响，既有 9 管道测试回归锁定）；
+2. asyncpg 参数编码 datetime.min（_EPOCH 水位哨兵）报「aware/naive 相减」——适配器 _naive_utc 归一 + astimezone 溢出降级；
+3. payload JSON 归一（datetime→isoformat/Decimal→str）在适配器层完成——真实适配器必须输出 JSON 原生值（mock 天然满足，管道契约隐含要求）；
+4. 缺表容忍：对端演练库缺表时跳过不报错（生产库 10 张齐后自动生效）；
+5. 踩坑警示：PowerShell Set-Content -Encoding UTF8（PS5.1 带 BOM）曾两次写坏 Python 源文件——统一改由 edit/write 工具或 Python 写文件。
+
+---
+
+# SDD Progress Ledger — EDP V1.3 T50（适配器前端可配置化 / 完整版）
+
+Spec: 行动计划 V1.3 T50（用户裁定「做完整版」：通用驱动 + systems 持久化 + CRUD API + 前端）
+Branch: feat/v13-realtime（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T50 | DONE（dev/演练级） | 迁移 0019 + edp_adapters/db_pull.py + catalog CRUD + adapters_admin 动态注册表 + worker DB 装配 + 前端弹窗 | systems.adapter_config JSONB；DbPullAdapter 配置驱动（替换硬编码 SpcPullAdapter）；POST/PUT/DELETE /systems/{id} + /test 探活；动态注册表 (tenant_id, name) 键 + RLS 隔离 + 静态 demo 回退 + is_dynamic 清单 mode；worker 主数据每租户 refresh_dynamic 装配；前端 CreateAdapterModal 接入方式 REST/DB_PULL + DSN + 表配置 JSON；契约导出 + SDK regen + 指纹绿 |
+
+验证：backend 全量 **788 passed**；ruff/lint-imports 绿；schema-gate 14/14；alembic 0019 up/down/up 循环通过；
+frontend web 257 + api-sdk 22 测试绿、lint 0 error、build 绿、契约指纹 OK。
+实跑（dev 栈）：API 注册 spc（PUT 适配老水位行）→ 清单 mode=real/health OK → POST sync 受理 →
+POST /systems/{id}/test {ok:true} → worker 兜底 DB 装配同步。
+
+关键裁定（记入偏差）：
+1. 动态注册表键 (tenant_id, name)——systems 唯一键本就 (tenant_id, name)，进程内全局 name 键不支持跨租户同名配置；静态 demo 适配器保持全局；
+2. 原生 SQL（asyncpg）jsonb 返回 JSON 文本、ORM 返回 dict——build_adapter_from_config 双形态归一（None/str/dict 防御）；
+3. catalog update 的 updated_at 用 datetime 值赋值（func.now() 在 model_validate 触发 MissingGreenlet 懒加载）；
+4. 真实适配器 health_check 内跑 asyncio.run（线程契约）——list/status/test 三处请求路径全部 to_thread 包裹（asyncio.run 在运行中事件循环直接炸）；
+5. DSN 明文存 adapter_config（dev 演练可接受；生产 secret 注入评审记为后续项）；
+6. 前端删除/编辑 UI 未做（后端 DELETE/PUT 已备 + 集成测试覆盖）——记后续前端项；
+7. 旧的 spc 水位 systems 行与 catalog 注册同名冲突——PUT 复用该行（迁移兼容路径：老行 adapter_config 为空时 PUT 注入配置即升级为 real）。
+
+---
+
+# SDD Progress Ledger — EDP V1.3 个人设置 + 适配器编辑/删除（T50 前端收口 + T51）
+
+Branch: feat/v13-realtime（续用）
+
+| Task | Status | 交付物 | Notes |
+|---|---|---|---|
+| T51 个人设置 | DONE | platform PUT /auth/profile + POST /auth/change-password + MeResponse 扩 display_name/email + features/profile（ProfilePage 四卡：资料/改密/主题/会话权限）+ 路由 /profile + Topbar/Sidebar 入口 | 改密强度（≥8 位字母+数字，不同于旧密）；审计 AUTH_PROFILE_UPDATE/AUTH_PASSWORD_CHANGE；改密旧密错误定为 400（会话内输入校验，避免触发客户端 401 会话失效登出）；MSW 三 handler + 5 前端测试 |
+| 适配器编辑/删除 | DONE | AdapterListItem.system_id + EditAdapterModal（GET 预填→PUT）+ 删除危险确认（DELETE）+ MSW GET/PUT/DELETE /systems/{id} + 清单追加动态行 | 前端 2 测试；编辑仅对动态（mode=real）行展示 |
+
+验证：backend 全量 **793 passed**（+5）；frontend web **264 passed**（+7：Profile 5 + Adapters 2）、api-sdk 22、shared 98、lint 0 error、build 绿；契约 4e46409a + 指纹门禁绿；实跑冒烟（/me 30 权限、profile 更新、改密+还原）通过；dev 栈重建健康。
+
+关键裁定（记入偏差）：
+1. 改密旧密不匹配 = 400 VALIDATION_ERROR（非 401）——401 会走客户端 refresh/会话失效链导致登出（前端实测踩坑，MSW+集成测试双锁）；
+2. platform.User/APIKey 的 tenant_id/org_id 声明了 ForeignKey（违反 ORM 不声明 FK 约定）——首次 users UPDATE flush 触发全局 mapper 配置 NoReferencedTableError（platform metadata 无 tenants/organizations 表）；已移除三处 FK 声明；
+3. auth 路由依赖顺序：get_principal 需要 get_db 先挂（sess 参数须在 principal 依赖之前）——_require_jwt_user 守卫抽公共后三端点参数顺序统一 sess 前置；
+4. 个人设置主题偏好复用 zustand persisted theme-store（不重复建设）。

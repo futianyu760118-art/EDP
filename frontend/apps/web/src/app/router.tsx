@@ -16,6 +16,7 @@ import { HealthPage } from "../features/health/HealthPage";
 import { ForbiddenPage, NotFoundPage } from "../features/placeholder/PlaceholderPage";
 import { RouteErrorBoundary } from "../features/placeholder/RouteErrorBoundary";
 import { OverviewPage } from "../features/overview/OverviewPage";
+import { ProfilePage } from "../features/profile/ProfilePage";
 import { QualityPage } from "../features/quality/QualityPage";
 import { RegistryPage } from "../features/registry/RegistryPage";
 import { SearchPage } from "../features/search/SearchPage";
@@ -89,6 +90,11 @@ export const routes: RouteObject[] = [
             path: "admin/systems",
             element: <HealthPage />,
             handle: { title: "系统健康" } satisfies RouteHandle,
+          },
+          {
+            path: "profile",
+            element: <ProfilePage />,
+            handle: { title: "个人设置" } satisfies RouteHandle,
           },
           {
             path: "tenants",

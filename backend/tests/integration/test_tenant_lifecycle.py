@@ -3,12 +3,16 @@
 叙事主线（M2 演示序列）：平台 admin 开通 acme（TRIAL + 初始管理员临时
 口令）→ 新管理员登录拿到独立租户上下文 → suspend 状态墙（业务 API 403
 TENANT_SUSPENDED）→ resume 复通 → cancel 强确认（confirm+reason）→
-重复注销 422；非平台管理员 403；slug 冲突 409；生命周期审计行
+重复注销 422；非平台管理员 403；编码自动生成（ten-YYYY-NNNN，序号
+递增不撞号，设计 2026-10-16-tenant-code-autogen）；生命周期审计行
 （T11 切面：ORM 属性赋值 → TENANTS_UPDATE）。
 
 登录租户解析：POST /auth/login 的 tenant_slug 参数（缺省 default）——
-B.1 既有机制，新租户管理员以 tenant_slug=acme 登录绑定新租户上下文。
+B.1 既有机制，新租户管理员以开通响应回传的 slug 登录绑定新租户上下文。
+清场按租户 name 定位（slug 已由服务端自动生成，测试不可预知）。
 """
+
+import re
 
 import httpx
 import pytest
@@ -26,9 +30,9 @@ TENANTS = "/api/v1/tenants"
 LOGIN = "/api/v1/auth/login"
 OBJECTS = "/api/v1/objects"
 SEED_PASSWORD = "Admin@123!"
+TENANT_CODE_PATTERN = r"ten-\d{4}-\d{4,}"
 
 ACME = {
-    "slug": "acme",
     "name": "Acme 示例租户",
     "plan": "TRIAL",
     "admin": {
@@ -55,41 +59,44 @@ async def client(
         await core_db.dispose_engine()  # 重置绑定到测试引擎的会话工厂
 
 
-async def _purge_tenant(db_session: AsyncSession, slug: str) -> None:
-    """删除 slug 租户全部数据行（子先父后；migrator 绕 RLS。审计行按
-    仅追加语义保留——resource_id 指向已删租户不构成外键）。"""
+async def _purge_tenant_by_id(
+    db_session: AsyncSession, tenant_id: str
+) -> None:
+    """删除租户全部数据行（子先父后；migrator 绕 RLS。审计行按仅追加
+    语义保留——resource_id 指向已删租户不构成外键。slug 由服务端自动
+    生成、name 可被改写，均不可作清场键，按 tenant_id 定位）。"""
+    for table in (
+        "tenant_members",
+        "users",
+        "tenant_quotas",
+        "tenant_usage_daily",
+    ):
+        await db_session.execute(
+            text(f"DELETE FROM platform.{table} WHERE tenant_id = :tid"),  # noqa: S608
+            {"tid": tenant_id},
+        )
     await db_session.execute(
-        text(
-            "DELETE FROM platform.tenant_members WHERE tenant_id IN"
-            " (SELECT tenant_id FROM platform.tenants WHERE slug = :slug)"
-        ),
-        {"slug": slug},
-    )
-    await db_session.execute(
-        text(
-            "DELETE FROM platform.users WHERE tenant_id IN"
-            " (SELECT tenant_id FROM platform.tenants WHERE slug = :slug)"
-        ),
-        {"slug": slug},
-    )
-    await db_session.execute(
-        text(
-            "DELETE FROM platform.tenant_quotas WHERE tenant_id IN"
-            " (SELECT tenant_id FROM platform.tenants WHERE slug = :slug)"
-        ),
-        {"slug": slug},
-    )
-    await db_session.execute(
-        text(
-            "DELETE FROM platform.tenant_usage_daily WHERE tenant_id IN"
-            " (SELECT tenant_id FROM platform.tenants WHERE slug = :slug)"
-        ),
-        {"slug": slug},
-    )
-    await db_session.execute(
-        text("DELETE FROM platform.tenants WHERE slug = :slug"), {"slug": slug}
+        text("DELETE FROM platform.tenants WHERE tenant_id = :tid"),
+        {"tid": tenant_id},
     )
     await db_session.commit()
+
+
+async def _purge_tenants_of_admin(
+    db_session: AsyncSession, admin_username: str
+) -> None:
+    """按初始管理员用户名解析租户清场（本模块全部租户共用 acme-admin，
+    一次清掉主租户与审计/序号用例的残留）。"""
+    tids = (
+        await db_session.execute(
+            text(
+                "SELECT DISTINCT tenant_id FROM platform.users WHERE username = :u"
+            ),
+            {"u": admin_username},
+        )
+    ).scalars()
+    for tid in tids:
+        await _purge_tenant_by_id(db_session, str(tid))
 
 
 async def _login(
@@ -108,21 +115,22 @@ async def _login(
 async def acme(
     client: httpx.AsyncClient, db_session: AsyncSession
 ) -> dict:
-    """开通 acme 租户（平台 admin）供各用例复用；前后双清场（前置防御
-    上次异常残留——否则 slug 冲突直接 409）。"""
-    await _purge_tenant(db_session, "acme")
+    """开通 acme 租户（平台 admin）供各用例复用；前后双清场（前清按
+    初始管理员用户名防残留，后清按 tenant_id 精确）。"""
+    await _purge_tenants_of_admin(db_session, ACME["admin"]["username"])
     resp = await client.post(TENANTS, json=ACME, headers=await _login(client, "admin"))
     assert resp.status_code == 201, resp.text
     yield resp.json()
-    await _purge_tenant(db_session, "acme")
+    await _purge_tenant_by_id(db_session, resp.json()["tenant_id"])
 
 
 async def _acme_admin_headers(client: httpx.AsyncClient, acme: dict) -> dict[str, str]:
-    """用开通响应的临时口令以 acme 管理员身份登录（tenant_slug 绑定新租户）。"""
+    """用开通响应的临时口令以 acme 管理员身份登录（tenant_slug 绑定
+    新租户——slug 取开通响应回传的自动生成编码）。"""
     resp = await client.post(
         LOGIN,
         json={
-            "tenant_slug": "acme",
+            "tenant_slug": acme["slug"],
             "username": ACME["admin"]["username"],
             "password": acme["temporary_password"],
         },
@@ -131,20 +139,20 @@ async def _acme_admin_headers(client: httpx.AsyncClient, acme: dict) -> dict[str
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
 
-# ---- 1. 开通：201 + 临时口令 + 新管理员登录拿到 acme 租户上下文 ----
+# ---- 1. 开通：201 + 自动编码 + 临时口令 + 新管理员登录拿到独立租户上下文 ----
 
 
 async def test_provision_and_initial_admin_login(
     client: httpx.AsyncClient, acme: dict
 ) -> None:
-    assert acme["slug"] == "acme"
+    assert re.fullmatch(TENANT_CODE_PATTERN, acme["slug"])  # 自动生成 ten-YYYY-NNNN
     assert acme["status"] == "ACTIVE"
     assert acme["temporary_password"]  # 未携带密码 → B.14 临时口令回传一次
 
     headers = await _acme_admin_headers(client, acme)
     current = await client.get(f"{TENANTS}/current", headers=headers)
     assert current.status_code == 200, current.text
-    assert current.json()["slug"] == "acme"
+    assert current.json()["slug"] == acme["slug"]
 
     # 配额行按 TRIAL 计划落库；usage MVP 为空字段
     detail = await client.get(
@@ -230,44 +238,57 @@ async def test_non_platform_admin_forbidden(
 ) -> None:
     resp = await client.post(
         TENANTS,
-        json={**ACME, "slug": "acme-forbidden"},
+        json=ACME,
         headers=await _login(client, "manager1"),
     )
     assert resp.status_code == 403, resp.text
     assert resp.json()["error"]["code"] == "FORBIDDEN"
 
 
-# ---- 5. slug 冲突（再建 acme）→ 409 ----
+# ---- 5. 编码自动生成：新格式 + 序号递增不撞号（请求体无 slug 字段） ----
 
 
-async def test_duplicate_slug_conflict(client: httpx.AsyncClient, acme: dict) -> None:
-    resp = await client.post(TENANTS, json=ACME, headers=await _login(client, "admin"))
-    assert resp.status_code == 409, resp.text
-    assert resp.json()["error"]["code"] == "CONFLICT"
+async def test_code_autogen_format_and_sequence(
+    client: httpx.AsyncClient, db_session: AsyncSession, acme: dict
+) -> None:
+    # 请求体传入 slug 亦被忽略（完全自动，不支持自定义）
+    resp = await client.post(
+        TENANTS,
+        json={**ACME, "name": "Acme 序号租户", "slug": "hand-picked"},
+        headers=await _login(client, "admin"),
+    )
+    assert resp.status_code == 201, resp.text
+    second = resp.json()
+    assert re.fullmatch(TENANT_CODE_PATTERN, second["slug"])
+    assert second["slug"] != "hand-picked"
+    assert second["slug"] != acme["slug"]  # 同年序号递增 → 必不相同
+    await _purge_tenant_by_id(db_session, second["tenant_id"])
 
 
 # ---- 6. 生命周期审计：suspend/resume/cancel 各产生一条 TENANTS_UPDATE ----
-# （独立租户 acme-audit，避免与其他用例的状态变更互相干扰）
+# （独立租户"Acme 审计租户"，避免与其他用例的状态变更互相干扰）
 
 
 async def test_lifecycle_audited(
     client: httpx.AsyncClient, db_session: AsyncSession
 ) -> None:
-    await _purge_tenant(db_session, "acme-audit")
+    await _purge_tenants_of_admin(db_session, ACME["admin"]["username"])
     admin = await _login(client, "admin")
     login_body = await client.post(
         LOGIN, json={"username": "admin", "password": SEED_PASSWORD}
     )
     assert login_body.status_code == 200, login_body.text
     admin_user_id = str(login_body.json()["user"]["user_id"])
+    created_tenant_id = ""
     try:
         created = await client.post(
             TENANTS,
-            json={**ACME, "slug": "acme-audit", "name": "Acme 审计租户"},
+            json={**ACME, "name": "Acme 审计租户"},
             headers=admin,
         )
         assert created.status_code == 201, created.text
         tenant_id = created.json()["tenant_id"]
+        created_tenant_id = tenant_id
 
         for operation in ("suspend", "resume", "cancel"):
             body = (
@@ -305,4 +326,7 @@ async def test_lifecycle_audited(
         assert all(row["actor_type"] == "HUMAN" for row in rows)
         assert all(row["actor_id"] == admin_user_id for row in rows)
     finally:
-        await _purge_tenant(db_session, "acme-audit")
+        if created_tenant_id:
+            await _purge_tenant_by_id(db_session, created_tenant_id)
+        else:  # 创建中断残留 → 按管理员用户名兜底
+            await _purge_tenants_of_admin(db_session, ACME["admin"]["username"])

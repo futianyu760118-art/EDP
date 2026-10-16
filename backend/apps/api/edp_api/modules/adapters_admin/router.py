@@ -95,7 +95,9 @@ async def adapter_status(
 ) -> AdapterStatusResponse:
     """最近任务（RUNNING/SUCCEEDED/FAILED + stats）；未跑过 last_sync=null。"""
     try:
-        return await adapters_service.adapter_status(sess, adapter_name)
+        return await adapters_service.adapter_status(
+            sess, principal.tenant_id, adapter_name
+        )
     except LookupError:
         raise EdpError.not_found("适配器不存在") from None
 
@@ -124,7 +126,7 @@ async def adapter_jobs(
     未注册 404。"""
     try:
         items, next_cursor = await adapters_service.list_jobs(
-            sess, adapter_name, limit=limit, cursor=cursor
+            sess, principal.tenant_id, adapter_name, limit=limit, cursor=cursor
         )
     except LookupError:
         raise EdpError.not_found("适配器不存在") from None

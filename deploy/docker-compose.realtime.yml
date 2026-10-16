@@ -1,0 +1,133 @@
+# V1.3 实时链路开发栈（可选叠加，不进默认 dev compose）
+#
+# 用法（在 dev 全栈之上叠加）：
+#   docker compose -f deploy/docker-compose.dev.yml `
+#     -f deploy/docker-compose.realtime.yml up -d --build
+#
+# 组件：
+# - scm-db：模拟供应链源库（postgres:16，wal_level=logical + 建库建表 +
+#   publication——pg-init-realtime/ 只在该库首次初始化执行）；
+# - kafka：KRaft 单节点（apache/kafka:3.9.0），仅承载 CDC topic；
+# - connect：Debezium PostgreSQL Connector（quay.io/debezium/connect:2.7），
+#   内部网络 bootstrap=kafka:9092；Connector 注册命令见 ops-runbook
+#   「V1.3 实时链路」节；
+# - worker：叠加 EDP_STREAM_* / EDP_MASTERDATA_* 环境启用消费与兜底。
+#
+# 位点/DLQ 表由 0018 迁移在 EDP 主库建立（sh deploy/migrate.sh 已覆盖）。
+name: edp-dev
+
+services:
+  scm-db:
+    image: postgres:16-alpine
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=10
+      - -c
+      - max_wal_senders=10
+    environment:
+      POSTGRES_USER: scm
+      POSTGRES_PASSWORD: scm_dev
+      POSTGRES_DB: scm
+    ports:
+      - "15434:5432"
+    volumes:
+      - scmpgdata:/var/lib/postgresql/data
+      - ./pg-init-realtime:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scm -d scm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    # cp-kafka 与 CI/testcontainers 同镜像族（KRaft 单节点）；apache/kafka
+    # 等价，镜像源故障时二者可互换
+    image: confluentinc/cp-kafka:7.6.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_LISTENERS: INTERNAL://kafka:29092,CONTROLLER://kafka:29093,HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # cp-kafka 要求 22 位 base64 UUID 形态（apache/kafka 无此限制）
+      CLUSTER_ID: xkcD6BDhQ12hHDK1PZL1hQ
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server kafka:29092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  connect:
+    image: quay.io/debezium/connect:2.7.2.Final
+    depends_on:
+      kafka:
+        condition: service_healthy
+      scm-db:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: edp-connect
+      CONFIG_STORAGE_TOPIC: edp-connect-configs
+      OFFSET_STORAGE_TOPIC: edp-connect-offsets
+      STATUS_STORAGE_TOPIC: edp-connect-status
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      # schemas.enable=true：消息体为 {"schema":..,"payload":{..}} 信封——
+      # 契约 contracts/realtime/debezium-event.schema.json 要求 payload 包装
+      # （false 时扁平化输出，消费侧按契约拒绝进 DLQ）
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "true"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    environment:
+      # worker 容器经 compose 内网连 kafka（INTERNAL listener kafka:29092）；
+      # 宿主进程联调用 localhost:9092（HOST listener 端口映射）。
+      # 路由：本地 scm demo 1 条 + 真实 SPC 演练（spc_test）7 条（T42 回执白名单
+      # 在 spc_test 实际存在的表；owner_domain 映射见 docs/V1.3_对端条件清单.md）
+      EDP_STREAM_KAFKA_BOOTSTRAP: kafka:29092
+      EDP_STREAM_ROUTES: >
+        [{"topic": "edp.default.scm.orders", "source_system": "scm",
+          "pk_columns": ["order_no"], "owner_domain": "sales",
+          "object_type": "ORDER", "tenant": "default"},
+         {"topic": "edp.default.spc.sale_order", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "sales", "tenant": "default"},
+         {"topic": "edp.default.spc.sale_order_line", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "sales", "tenant": "default"},
+         {"topic": "edp.default.spc.production_task_order", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "production", "tenant": "default"},
+         {"topic": "edp.default.spc.production_order_schedule_snapshot", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "production", "tenant": "default"},
+         {"topic": "edp.default.spc.process_progress", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "production", "tenant": "default"},
+         {"topic": "edp.default.spc.scm_inventory", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "delivery", "tenant": "default"},
+         {"topic": "edp.default.spc.purchase_order", "source_system": "spc",
+          "pk_columns": ["id"], "owner_domain": "procurement", "tenant": "default"}]
+      EDP_STREAM_GROUP: edp-worker
+      # T50：适配器改为 DB 装配（catalog POST /systems + adapter_config），
+      # 不再用 EDP_SPC_DB_URL env——注册示例见 ops-runbook「T50 适配器 CRUD」；
+      # 兜底名单填系统名（catalog 注册的适配器名），worker 每轮从 systems 表装配
+      EDP_MASTERDATA_ADAPTERS: "spc"
+      EDP_MASTERDATA_INTERVAL_S: "3600"
+
+volumes:
+  scmpgdata:

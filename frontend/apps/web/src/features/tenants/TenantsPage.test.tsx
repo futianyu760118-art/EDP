@@ -111,22 +111,21 @@ describe("TenantsPage 租户列表（MSW 模式渲染路由）", () => {
     await waitFor(() => expect(rows().length).toBe(8));
   });
 
-  it("新建租户：提交请求体断言 + 一次性临时口令展示；slug 409 行内错误", async () => {
+  it("新建租户：无编码输入（自动生成）+ 提交请求体断言 + 临时口令展示；409 行内错误", async () => {
     let createBody: Record<string, unknown> | undefined;
     server.use(
       http.post("*/api/v1/tenants", async ({ request }) => {
         createBody = (await request.json()) as Record<string, unknown>;
-        const slug = (createBody?.slug as string) ?? "";
-        if (slug === "acme") {
+        if (createBody?.name === "冲突租户") {
           return HttpResponse.json(
-            { error: { code: "CONFLICT", message: "租户编码已存在", request_id: "mock" } },
+            { error: { code: "CONFLICT", message: "创建冲突", request_id: "mock" } },
             { status: 409 },
           );
         }
         return HttpResponse.json(
           {
             tenant_id: "00000000-0000-4000-8000-000000000599",
-            slug,
+            slug: `ten-${new Date().getFullYear()}-0007`,
             name: createBody?.name ?? "",
             status: "ACTIVE",
             created_at: "2026-09-28T08:00:00.000Z",
@@ -143,11 +142,11 @@ describe("TenantsPage 租户列表（MSW 模式渲染路由）", () => {
     fireEvent.click(document.querySelector('[data-dom-id="tenant-create"]')!);
     await waitFor(() => expect(document.querySelector('[data-dom-id="tenant-create-form"]')).not.toBeNull());
 
+    // 编码输入框已移除（服务端自动生成 ten-YYYY-NNNN）
+    expect(document.querySelector('[data-dom-id="tenant-slug"]')).toBeNull();
+
     fireEvent.change(document.querySelector('[data-dom-id="tenant-name"]')!, {
       target: { value: "试点租户" },
-    });
-    fireEvent.change(document.querySelector('[data-dom-id="tenant-slug"]')!, {
-      target: { value: "pilot-x" },
     });
     fireEvent.click(document.querySelector('[data-dom-id="tenant-plan-PREMIUM"]')!);
     fireEvent.change(document.querySelector('[data-dom-id="tenant-admin-username"]')!, {
@@ -165,7 +164,6 @@ describe("TenantsPage 租户列表（MSW 模式渲染路由）", () => {
     await waitFor(() => expect(createBody).toBeDefined());
     expect(createBody).toEqual({
       name: "试点租户",
-      slug: "pilot-x",
       plan: "PREMIUM",
       admin: {
         username: "pilot-admin",
@@ -173,20 +171,22 @@ describe("TenantsPage 租户列表（MSW 模式渲染路由）", () => {
         display_name: "试点管理员",
       },
     });
-    // 201 → 一次性临时口令展示行
-    await waitFor(() => expect(document.querySelector('[data-dom-id="temp-password-box"]')).not.toBeNull());
+    // 201 → 成功页展示自动生成编码 + 一次性临时口令展示行
+    await waitFor(() =>
+      expect(document.querySelector('[data-dom-id="tenant-create-success"]')).not.toBeNull(),
+    );
+    expect(document.querySelector('[data-dom-id="tenant-create-success"]')!.textContent).toContain(
+      `ten-${new Date().getFullYear()}-0007`,
+    );
     expect(document.querySelector('[data-dom-id="temp-password-value"]')!.textContent).toBe("Tmp-9k2f-Xq7b");
     expect(screen.getByText(/仅此一次可见/)).toBeInTheDocument();
     fireEvent.click(document.querySelector('[data-dom-id="modal-form-submit"]')!); // 完成 → 关闭
 
-    // 再开一次：slug 冲突 → 409 行内
+    // 再开一次：服务端 409 → 行内错误提示
     fireEvent.click(document.querySelector('[data-dom-id="tenant-create"]')!);
     await waitFor(() => expect(document.querySelector('[data-dom-id="tenant-create-form"]')).not.toBeNull());
     fireEvent.change(document.querySelector('[data-dom-id="tenant-name"]')!, {
-      target: { value: "重复编码租户" },
-    });
-    fireEvent.change(document.querySelector('[data-dom-id="tenant-slug"]')!, {
-      target: { value: "acme" },
+      target: { value: "冲突租户" },
     });
     fireEvent.change(document.querySelector('[data-dom-id="tenant-admin-username"]')!, {
       target: { value: "admin2" },
@@ -200,7 +200,7 @@ describe("TenantsPage 租户列表（MSW 模式渲染路由）", () => {
     fireEvent.click(document.querySelector('[data-dom-id="modal-form-submit"]')!);
     await waitFor(() => expect(document.querySelector('[data-dom-id="tenant-create-error"]')).not.toBeNull());
     expect(document.querySelector('[data-dom-id="tenant-create-error"]')!.textContent).toContain(
-      "租户编码已被占用",
+      "创建冲突",
     );
   });
 

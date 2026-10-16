@@ -39,12 +39,9 @@ class TenantAdminCreate(BaseModel):
 
 
 class TenantCreateRequest(BaseModel):
-    """开通租户请求（B.14）：slug 全局唯一。"""
+    """开通租户请求（B.14）：编码由服务端自动生成（ten-YYYY-NNNN），
+    请求体不携带 slug；传入的 slug 字段被忽略（完全自动，不支持自定义）。"""
 
-    slug: str = Field(
-        pattern=r"^[a-z0-9-]{2,32}$",
-        description="租户 slug（全局唯一；小写字母/数字/连字符，2~32 字符）",
-    )
     name: str = Field(min_length=1, max_length=128)
     plan: TenantPlan
     admin: TenantAdminCreate

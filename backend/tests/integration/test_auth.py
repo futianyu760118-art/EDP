@@ -123,7 +123,7 @@ async def test_me_admin_roles_and_wildcard_permissions(
     assert resp.status_code == 200
     body = resp.json()
     assert set(body) == {
-        "user_id", "username", "org_id", "tenant_id",
+        "user_id", "username", "display_name", "email", "org_id", "tenant_id",
         "is_platform_admin", "roles", "permissions",
     }
     assert body["username"] == "admin"

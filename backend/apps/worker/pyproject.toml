@@ -5,6 +5,7 @@ description = "EDP Outbox Worker（事件分发）"
 requires-python = ">=3.12"
 dependencies = [
     "edp-api",
+    "aiokafka>=0.12",
 ]
 
 [tool.uv.sources]

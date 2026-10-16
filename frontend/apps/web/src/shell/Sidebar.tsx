@@ -1,4 +1,3 @@
-import { App as AntdApp } from "antd";
 import {
   Activity,
   Brain,
@@ -21,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { canSeeGroup, planLabel, roleLabel } from "@edp/shared";
 import { useSessionStore } from "../features/auth/session-store";
 import { initials } from "../lib/labels";
@@ -100,7 +99,7 @@ function NavGroupTitle({ title }: { title: string }) {
 
 /** 侧边栏（结构/class/尺寸照抄原型 运营总览.html 行 239~306）。 */
 export function Sidebar() {
-  const { message } = AntdApp.useApp();
+  const navigate = useNavigate();
   const user = useSessionStore((s) => s.user);
   const tenant = useSessionStore((s) => s.tenant);
   const [switchOpen, setSwitchOpen] = useState(false);
@@ -175,7 +174,7 @@ export function Sidebar() {
             type="button"
             className="w-8 h-8 rounded-lg border border-border bg-card grid place-items-center text-muted-foreground hover:bg-muted"
             data-dom-id="settings-btn"
-            onClick={() => message.info("个人设置建设中")}
+            onClick={() => void navigate("/profile")}
           >
             <Settings className="w-4 h-4" aria-hidden="true" />
           </button>
