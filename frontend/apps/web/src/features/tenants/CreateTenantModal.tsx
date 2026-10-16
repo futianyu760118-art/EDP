@@ -26,13 +26,13 @@ export interface CreateTenantModalProps {
 
 /**
  * 新建租户弹窗（EDP-501，视觉基线 `新建租户 - 弹窗.html`）：
- * 租户名称 / 租户编码（slug，409 行内）/ 套餐版本单选卡 / 初始管理员
- * （用户名/邮箱/显示名称/初始口令可选）→ POST /tenants → 201 →
- * 一次性临时口令展示行（temporary_password 非空时，仅此一次可见）。
+ * 租户名称 / 套餐版本单选卡 / 初始管理员（用户名/邮箱/显示名称/初始口令
+ * 可选）→ POST /tenants → 201 → 编码由服务端自动生成（ten-YYYY-NNNN，
+ * 成功页展示）+ 一次性临时口令展示行（temporary_password 非空时，
+ * 仅此一次可见）。
  */
 export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
   const [plan, setPlan] = useState<TenantPlan>("STANDARD");
   const [adminUsername, setAdminUsername] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
@@ -47,7 +47,6 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
   useEffect(() => {
     if (!open) return;
     setName("");
-    setSlug("");
     setPlan("STANDARD");
     setAdminUsername("");
     setAdminEmail("");
@@ -60,7 +59,6 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
 
   const canSubmit =
     name.trim() !== "" &&
-    slug.trim() !== "" &&
     adminUsername.trim() !== "" &&
     adminEmail.trim() !== "" &&
     adminDisplayName.trim() !== "" &&
@@ -75,7 +73,6 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
     createTenant.mutate(
       {
         name: name.trim(),
-        slug: slug.trim(),
         plan,
         admin: {
           username: adminUsername.trim(),
@@ -92,7 +89,7 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
         },
         onError: (err) => {
           const code = (err as unknown as { code?: string }).code;
-          if (code === "CONFLICT") setError("租户编码已被占用，请更换");
+          if (code === "CONFLICT") setError("创建冲突，请重试");
           else setError("创建失败，请稍后重试");
         },
       },
@@ -176,26 +173,8 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
               }}
               className={inputClass}
             />
-          </div>
-
-          <div>
-            <div className={labelClass}>
-              租户编码 <span className="text-state-error">*</span>
-            </div>
-            <input
-              type="text"
-              data-dom-id="tenant-slug"
-              aria-label="租户编码"
-              placeholder="例如：acme-east"
-              value={slug}
-              onChange={(e) => {
-                setSlug(e.target.value);
-                setError(null);
-              }}
-              className={inputClass}
-            />
-            <p className="mt-1.5 text-[10px] text-muted-foreground" data-dom-id="tenant-slug-hint">
-              全局唯一标识，创建后不可修改。
+            <p className="mt-1.5 text-[10px] text-muted-foreground">
+              租户编码由系统自动生成（ten-年份-序号），创建后不可修改。
             </p>
           </div>
 

@@ -17,6 +17,9 @@ import {
 
 /** B.14/W5 EDP-501 租户平台面：清单/详情/成员/配额/生命周期/context 切换 + 用量。 */
 
+/** POST /tenants 编码自动生成 mock 序号（模块内递增，模拟按年重置语义）。 */
+let mockCodeSeq = 0;
+
 function memberNotFound() {
   return errorOf("NOT_FOUND", "成员不存在", 404);
 }
@@ -61,25 +64,24 @@ export const tenantHandlers = [
     return HttpResponse.json(paginate(filtered, clampLimit(q.get("limit"), 20, 100), q.get("cursor")));
   }),
 
-  // POST /tenants：开通（B.14）；slug 冲突 409；未携带 admin.password 时回传一次性临时口令
+  // POST /tenants：开通（B.14）；编码服务端自动生成 ten-YYYY-NNNN（模块内
+  // 递增序号）；未携带 admin.password 时回传一次性临时口令
   http.post("*/api/v1/tenants", async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as {
-      slug?: string;
       name?: string;
       plan?: string;
       admin?: { username?: string; password?: string | null };
     };
-    if (!body.slug || !body.name || !body.plan) {
-      return errorOf("VALIDATION_ERROR", "slug/name/plan 均为必填", 400);
+    if (!body.name || !body.plan) {
+      return errorOf("VALIDATION_ERROR", "name/plan 均为必填", 400);
     }
-    if (tenantRows.some((t) => t.slug === body.slug)) {
-      return errorOf("CONFLICT", "租户编码已存在", 409);
-    }
+    mockCodeSeq += 1;
+    const slug = `ten-${new Date().getFullYear()}-${String(mockCodeSeq).padStart(4, "0")}`;
     const generated = body.admin?.password == null || body.admin.password === "";
     return HttpResponse.json(
       {
         tenant_id: `00000000-0000-4000-8000-${String(599).padStart(12, "0")}`,
-        slug: body.slug,
+        slug,
         name: body.name,
         status: "ACTIVE",
         created_at: new Date().toISOString(),

@@ -75,30 +75,30 @@ describe("tenant handlers（W5 平台面 EDP-501）", () => {
     expect(page2.next_cursor).toBeNull();
   });
 
-  it("开通：未携带口令 → 201 临时口令回传一次；slug 冲突 → 409", async () => {
+  it("开通：未携带口令 → 201 自动生成编码 + 临时口令回传一次；缺 name → 400", async () => {
     const ok = await fetch(`${BASE}/api/v1/tenants`, {
       method: "POST",
       body: JSON.stringify({
-        slug: "pilot-x",
         name: "试点租户",
         plan: "TRIAL",
         admin: { username: "padmin", email: "p@example.com", display_name: "试点管理员" },
       }),
     });
     expect(ok.status).toBe(201);
-    expect(await ok.json()).toMatchObject({ slug: "pilot-x", temporary_password: expect.any(String) });
+    const body = (await ok.json()) as { slug: string; temporary_password: string };
+    // 编码由服务端自动生成 ten-YYYY-NNNN（请求体不携带 slug）
+    expect(body.slug).toMatch(/^ten-\d{4}-\d{4,}$/);
+    expect(body.temporary_password).toEqual(expect.any(String));
 
-    const conflict = await fetch(`${BASE}/api/v1/tenants`, {
+    const missing = await fetch(`${BASE}/api/v1/tenants`, {
       method: "POST",
       body: JSON.stringify({
-        slug: "acme",
-        name: "重复",
         plan: "TRIAL",
         admin: { username: "a", email: "a@example.com", display_name: "A", password: "Secret@123" },
       }),
     });
-    expect(conflict.status).toBe(409);
-    expect(await conflict.json()).toMatchObject({ error: { code: "CONFLICT" } });
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toMatchObject({ error: { code: "VALIDATION_ERROR" } });
   });
 
   it("详情/配额：acme 提额覆盖（storage 3000）；PATCH quotas reason 缺失 → 422", async () => {

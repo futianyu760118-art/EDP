@@ -40,9 +40,7 @@ SEED_PASSWORD = "Admin@123!"
 READONLY_KEY = "t2-ops-readonly-key"
 READONLY_PRINCIPAL = "t2-ops-readonly"
 
-ACME_SLUG = "acme-ops"
 ACME = {
-    "slug": ACME_SLUG,
     "name": "Acme 运营数据源测试租户",
     "plan": "TRIAL",
     "admin": {
@@ -101,7 +99,7 @@ async def _clean_ops_rows(
     await _purge_module_rows(db_session, default_tenant_id)
     yield
     await _purge_module_rows(db_session, default_tenant_id)
-    await _purge_tenant(db_session, ACME_SLUG)
+    await _purge_tenants_of_admin(db_session, ACME["admin"]["username"])
     await db_session.commit()
 
 
@@ -124,35 +122,34 @@ async def _purge_module_rows(db_session: AsyncSession, tenant_id: UUID) -> None:
     await db_session.commit()
 
 
-async def _purge_tenant(db_session: AsyncSession, slug: str) -> None:
-    """删除 slug 租户全部数据行（子先父后；migrator 绕 RLS）。"""
-    await db_session.execute(
-        text(
-            "DELETE FROM platform.tenant_members WHERE tenant_id IN"
-            " (SELECT tenant_id FROM platform.tenants WHERE slug = :slug)"
-        ),
-        {"slug": slug},
-    )
-    await db_session.execute(
-        text(
-            "DELETE FROM platform.users WHERE tenant_id IN"
-            " (SELECT tenant_id FROM platform.tenants WHERE slug = :slug)"
-        ),
-        {"slug": slug},
-    )
-    await db_session.execute(
-        text(
-            "DELETE FROM platform.tenant_quotas WHERE tenant_id IN"
-            " (SELECT tenant_id FROM platform.tenants WHERE slug = :slug)"
-        ),
-        {"slug": slug},
-    )
-    await db_session.execute(
-        text(
-            "DELETE FROM platform.tenants WHERE slug = :slug"
-        ),
-        {"slug": slug},
-    )
+async def _purge_tenants_of_admin(
+    db_session: AsyncSession, admin_username: str
+) -> None:
+    """按初始管理员用户名解析租户清场（migrator 绕 RLS；slug 由服务端
+    自动生成不可预知、name 可被改写，均不可作清场键）。"""
+    tids = (
+        await db_session.execute(
+            text(
+                "SELECT DISTINCT tenant_id FROM platform.users WHERE username = :u"
+            ),
+            {"u": admin_username},
+        )
+    ).scalars()
+    for tid in tids:
+        for table in (
+            "tenant_members",
+            "users",
+            "tenant_quotas",
+            "tenant_usage_daily",
+        ):
+            await db_session.execute(
+                text(f"DELETE FROM platform.{table} WHERE tenant_id = :tid"),  # noqa: S608
+                {"tid": str(tid)},
+            )
+        await db_session.execute(
+            text("DELETE FROM platform.tenants WHERE tenant_id = :tid"),
+            {"tid": str(tid)},
+        )
     await db_session.commit()
 
 
@@ -414,7 +411,7 @@ async def test_admin_users_tenant_admin_forbidden(
     resp = await client.post(
         LOGIN,
         json={
-            "tenant_slug": ACME_SLUG,
+            "tenant_slug": created.json()["slug"],  # 服务端自动生成编码
             "username": ACME["admin"]["username"],
             "password": temporary_password,
         },

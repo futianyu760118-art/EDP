@@ -8929,7 +8929,7 @@
         "type": "object"
       },
       "TenantCreateRequest": {
-        "description": "开通租户请求（B.14）：slug 全局唯一。",
+        "description": "开通租户请求（B.14）：编码由服务端自动生成（ten-YYYY-NNNN），\n请求体不携带 slug；传入的 slug 字段被忽略（完全自动，不支持自定义）。",
         "properties": {
           "admin": {
             "$ref": "#/components/schemas/TenantAdminCreate"
@@ -8949,16 +8949,9 @@
             ],
             "title": "Plan",
             "type": "string"
-          },
-          "slug": {
-            "description": "租户 slug（全局唯一；小写字母/数字/连字符，2~32 字符）",
-            "pattern": "^[a-z0-9-]{2,32}$",
-            "title": "Slug",
-            "type": "string"
           }
         },
         "required": [
-          "slug",
           "name",
           "plan",
           "admin"
@@ -12531,7 +12524,7 @@
     },
     "/api/v1/auth/change-password": {
       "post": {
-        "description": "旧密校验（401）→ 强度校验（400）→ Argon2id 重哈希 + 审计。",
+        "description": "旧密校验（400，会话内输入校验语义）→ 强度校验（400）→ Argon2id\n重哈希 + 审计。",
         "operationId": "change_password_api_v1_auth_change_password_post",
         "requestBody": {
           "content": {
@@ -19063,7 +19056,7 @@
         ]
       },
       "post": {
-        "description": "单事务开通：tenants(ACTIVE) + tenant_quotas（PLAN_QUOTAS[plan]）+\n初始管理员 users + tenant_members(ADMIN)；请求未携带 admin.password 时\n响应回传一次性临时口令（B.14 扩展）。slug 冲突 → 409。",
+        "description": "单事务开通：tenants(ACTIVE) + tenant_quotas（PLAN_QUOTAS[plan]）+\n初始管理员 users + tenant_members(ADMIN)；请求未携带 admin.password 时\n响应回传一次性临时口令（B.14 扩展）。租户编码服务端自动生成\n（ten-YYYY-NNNN，next_tenant_code 原子取号）；编码撞号 → 409（防御）。",
         "operationId": "create_tenant_api_v1_tenants_post",
         "requestBody": {
           "content": {

@@ -31,11 +31,11 @@ TENANTS = "/api/v1/tenants"
 LOGIN = "/api/v1/auth/login"
 OBJECTS = "/api/v1/objects"
 SEED_PASSWORD = "Admin@123!"
-SLUG = "acme-w5"
+TENANT_NAME = "Acme W5 租户"
+EMAIL_DOMAIN = "acme-w5.example.com"
 
 ACME = {
-    "slug": SLUG,
-    "name": "Acme W5 租户",
+    "name": TENANT_NAME,
     "plan": "TRIAL",
     "admin": {
         "username": "acme-w5-admin",
@@ -60,9 +60,13 @@ async def client(
         await core_db.dispose_engine()
 
 
-async def _purge_tenant(db_session: AsyncSession, slug: str) -> None:
-    """删除 slug 租户全部数据行（子先父后；migrator 绕 RLS；审计行按仅
-    追加语义保留）。"""
+async def _purge_tenant_by_id(
+    db_session: AsyncSession, tenant_id: UUID | str
+) -> None:
+    """删除租户全部数据行（子先父后；migrator 绕 RLS；审计行按仅追加
+    语义保留）。按 tenant_id 定位——slug 由服务端自动生成、name 可被
+    PATCH 改写，均不可作清场键。"""
+    tid = str(tenant_id)
     for table in (
         "tenant_members",
         "users",
@@ -70,16 +74,30 @@ async def _purge_tenant(db_session: AsyncSession, slug: str) -> None:
         "tenant_usage_daily",
     ):
         await db_session.execute(
-            text(
-                "DELETE FROM platform." + table + " WHERE tenant_id IN"
-                " (SELECT tenant_id FROM platform.tenants WHERE slug = :slug)"
-            ),
-            {"slug": slug},
+            text(f"DELETE FROM platform.{table} WHERE tenant_id = :tid"),  # noqa: S608
+            {"tid": tid},
         )
     await db_session.execute(
-        text("DELETE FROM platform.tenants WHERE slug = :slug"), {"slug": slug}
+        text("DELETE FROM platform.tenants WHERE tenant_id = :tid"), {"tid": tid}
     )
     await db_session.commit()
+
+
+async def _purge_tenants_of_admin(
+    db_session: AsyncSession, admin_username: str
+) -> None:
+    """按初始管理员用户名解析租户清场（防改名残留：PATCH 可改 name，
+    admin username 在本模块用例中不可变）。"""
+    tids = (
+        await db_session.execute(
+            text(
+                "SELECT DISTINCT tenant_id FROM platform.users WHERE username = :u"
+            ),
+            {"u": admin_username},
+        )
+    ).scalars()
+    for tid in tids:
+        await _purge_tenant_by_id(db_session, tid)
 
 
 async def _login(
@@ -95,20 +113,22 @@ async def _login(
 
 @pytest.fixture
 async def acme(client: httpx.AsyncClient, db_session: AsyncSession) -> dict:
-    """开通 acme-w5 租户（平台 admin）供各用例复用；前后双清场。"""
-    await _purge_tenant(db_session, SLUG)
+    """开通 acme-w5 租户（平台 admin）供各用例复用；前后双清场（前清按
+    初始管理员用户名防上次改名残留，后清按 tenant_id 精确）。"""
+    await _purge_tenants_of_admin(db_session, ACME["admin"]["username"])
     resp = await client.post(TENANTS, json=ACME, headers=await _login(client, "admin"))
     assert resp.status_code == 201, resp.text
     yield resp.json()
-    await _purge_tenant(db_session, SLUG)
+    await _purge_tenant_by_id(db_session, resp.json()["tenant_id"])
 
 
 async def _acme_admin_headers(client: httpx.AsyncClient, acme: dict) -> dict[str, str]:
-    """以开通响应的临时口令登录 acme-w5 管理员（tenant_slug 绑定新租户）。"""
+    """以开通响应的临时口令登录 acme-w5 管理员（tenant_slug 取响应回传
+    的自动生成编码，绑定新租户）。"""
     resp = await client.post(
         LOGIN,
         json={
-            "tenant_slug": SLUG,
+            "tenant_slug": acme["slug"],
             "username": ACME["admin"]["username"],
             "password": acme["temporary_password"],
         },
@@ -141,7 +161,7 @@ async def _insert_user(
             "u": user_id,
             "t": tenant_id,
             "n": username,
-            "e": f"{username}@{SLUG}.example.com",
+            "e": f"{username}@{EMAIL_DOMAIN}",
             "pw": hash_password(SEED_PASSWORD),
             "d": display_name,
         },
@@ -256,7 +276,7 @@ async def test_context_switch_rls_and_audit(
         ctx_headers = {"Authorization": f"Bearer {body['access_token']}"}
         current = await client.get(f"{TENANTS}/current", headers=ctx_headers)
         assert current.status_code == 200, current.text
-        assert current.json()["slug"] == SLUG
+        assert current.json()["slug"] == acme["slug"]  # 自动生成编码
 
         target = await client.get(
             OBJECTS, headers=ctx_headers, params={"source_id": "CTX-ACME-0001"}

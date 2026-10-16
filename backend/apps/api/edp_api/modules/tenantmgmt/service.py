@@ -16,7 +16,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -288,13 +288,45 @@ async def bump_usage_daily(
 # ---- W2 生命周期（EDP-024） ----
 
 
+async def next_tenant_code(
+    sess: AsyncSession, year: int | None = None
+) -> str:
+    """原子取号生成租户编码 ten-<year>-<NNNN>（按年重置，>9999 自然 5 位）。
+
+    计数表（迁移 0020）单条 upsert-returning 取号：同年初次 INSERT、
+    已有行行锁递增——事务内串行化，不重号、无竞态、无重试。行锁随
+    请求事务持有至提交，编号消耗与租户落库同生共死（请求失败回滚即
+    让号，不留空洞）。
+
+    ``year`` 仅供测试注入跨年语义，业务路径缺省取当前 UTC 年（与
+    created_at 同源）。
+    """
+    if year is None:
+        year = datetime.now(UTC).year
+    no = (
+        await sess.execute(
+            text("""
+                INSERT INTO platform.tenant_code_seq (year, last_no)
+                VALUES (:year, 1)
+                ON CONFLICT (year) DO UPDATE
+                    SET last_no = platform.tenant_code_seq.last_no + 1,
+                        updated_at = now()
+                RETURNING last_no
+            """),
+            {"year": year},
+        )
+    ).scalar_one()
+    return f"ten-{year}-{no:04d}"
+
+
 async def create_tenant(
     sess: AsyncSession, req: TenantCreateRequest, actor_id: str
 ) -> tuple[Tenant, UserRow, str | None]:
     """单事务开通租户：tenants(ACTIVE) + tenant_quotas(PLAN_QUOTAS[plan]) +
     初始管理员 users + tenant_members(member_roles=["ADMIN"])。
 
-    - slug 全局唯一：先查再插 + 唯一索引 IntegrityError 兜底 → 409；
+    - 编码自动生成（ten-YYYY-NNNN，next_tenant_code 原子取号）；slug
+      唯一索引 IntegrityError 兜底 409（计数表被外部改坏时的防御）；
     - users / tenant_members FORCE RLS：租户行 flush 落库后 bind_tenant 到
       新租户再写管理员（username/email 租户内唯一由索引保证，同样先查
       再插 + 兜底）；
@@ -304,12 +336,11 @@ async def create_tenant(
     Returns:
         (租户, 初始管理员用户, 临时口令)；请求已携带密码时第三项为 None。
     """
-    if await get_tenant_by_slug(sess, req.slug) is not None:
-        raise EdpError.conflict("租户 slug 已存在")
+    slug = await next_tenant_code(sess)
     now = datetime.now(UTC)
     tenant = Tenant(
         tenant_id=uuid4(),
-        slug=req.slug,
+        slug=slug,
         name=req.name,
         plan=req.plan,
         status="ACTIVE",
@@ -320,10 +351,10 @@ async def create_tenant(
     )
     sess.add(tenant)
     try:
-        await sess.flush()  # slug 唯一索引在此暴露并发首插竞争
+        await sess.flush()  # slug 唯一索引兜底（计数表异常时的最后防线）
     except IntegrityError:
         await sess.rollback()
-        raise EdpError.conflict("租户 slug 已存在") from None
+        raise EdpError.conflict("租户编码生成冲突，请重试") from None
     sess.add(
         TenantQuota(
             tenant_id=tenant.tenant_id,

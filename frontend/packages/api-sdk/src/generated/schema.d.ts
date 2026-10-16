@@ -428,7 +428,8 @@ export interface paths {
         put?: never;
         /**
          * 修改当前用户密码
-         * @description 旧密校验（401）→ 强度校验（400）→ Argon2id 重哈希 + 审计。
+         * @description 旧密校验（400，会话内输入校验语义）→ 强度校验（400）→ Argon2id
+         *     重哈希 + 审计。
          */
         post: operations["change_password_api_v1_auth_change_password_post"];
         delete?: never;
@@ -1549,7 +1550,8 @@ export interface paths {
          * 开通租户（含初始管理员与计划配额）
          * @description 单事务开通：tenants(ACTIVE) + tenant_quotas（PLAN_QUOTAS[plan]）+
          *     初始管理员 users + tenant_members(ADMIN)；请求未携带 admin.password 时
-         *     响应回传一次性临时口令（B.14 扩展）。slug 冲突 → 409。
+         *     响应回传一次性临时口令（B.14 扩展）。租户编码服务端自动生成
+         *     （ten-YYYY-NNNN，next_tenant_code 原子取号）；编码撞号 → 409（防御）。
          */
         post: operations["create_tenant_api_v1_tenants_post"];
         delete?: never;
@@ -5655,7 +5657,8 @@ export interface components {
         };
         /**
          * TenantCreateRequest
-         * @description 开通租户请求（B.14）：slug 全局唯一。
+         * @description 开通租户请求（B.14）：编码由服务端自动生成（ten-YYYY-NNNN），
+         *     请求体不携带 slug；传入的 slug 字段被忽略（完全自动，不支持自定义）。
          */
         TenantCreateRequest: {
             admin: components["schemas"]["TenantAdminCreate"];
@@ -5666,11 +5669,6 @@ export interface components {
              * @enum {string}
              */
             plan: "TRIAL" | "STANDARD" | "PREMIUM" | "DEDICATED";
-            /**
-             * Slug
-             * @description 租户 slug（全局唯一；小写字母/数字/连字符，2~32 字符）
-             */
-            slug: string;
         };
         /**
          * TenantCreateResponse
