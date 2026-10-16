@@ -1,0 +1,125 @@
+# AEOS 企业数据与证据中台 EDP 迭代行动计划（V1.3）
+
+**配套方案：** `docs/AEOS_企业数据与证据中台_EDP_迭代版总体方案_V1.3.md`（修订稿，变更清单 C17–C22）  
+**上游依据：** 《数据中台对接其他系统方案》（CDC 实时链路选型）、《AEOS_企业数据与证据中台_EDP_迭代行动计划_V1.2.md》
+**执行基线：** V1.2 收官状态（40 任务完成 35；T28/T29/T31 待外部资源）
+**目标：** 收口 V1.2 遗留（真实 ERP/MES 连接器 + 真实数据准入），并建设供应链系统 CDC+Kafka 实时链路，进入 EDP 数据接入的"实时化"阶段
+**执行铁律：** 已实现模块不重建；Contract First；治理随闭环走；门禁未过不进下一阶段；冻结条款解冻必须书面裁决
+
+---
+
+# 一、目标与范围
+
+| 维度 | 内容 |
+| --- | --- |
+| 总目标 | ① 真实 ERP/MES 连接器落地，真实数据跑通准入闭环；② 供应链 PostgreSQL 经 Debezium CDC → Kafka → 中台流消费端口 → RAW 管道，实现核心业务对象（订单/库存/工单/物料）实时入库 |
+| 建设范围 | V1.2 遗留（T28/T29/T31）+ CDC+Kafka 实时链路（T41~T48）+ 主数据定时增量兜底双轨 |
+| 解冻裁决 | V1.2 冻结条款"不引入 Kafka"**局部解冻**：仅引入 Kafka + Debezium Connector（CDC 专用），**不引入** Lakehouse / Flink 实时计算 / 重型流处理平台 / 向量集群 |
+| 兼容性基线 | 流消费端口、topic 命名、SourceRecord 管道与数据库类型解耦；首期 PostgreSQL（pgoutput），MySQL（binlog）/ SQL Server（内置 CDC）为预留扩展项，换库仅换 Connector 配置 |
+| 成功判据 | 第七节验收标准表全部通过 |
+
+---
+
+# 二、角色分工
+
+| 角色 | 职责 |
+| --- | --- |
+| PM / 方案负责人 | 计划推进、门禁组织、解冻裁决组织、跨系统协调 |
+| 平台负责人（EDP 后端） | stream 消费端口、RAW 落库管道、血缘 capture 分支 |
+| 治理负责人 | CDC 数据入 RAW 后的清洗/准入复用确认、对账口径 |
+| 连接器负责人 | 真实 ERP/MES Connector（V1.2 遗留）、stream 端口实现、主数据兜底双轨 |
+| 供应链系统 DBA / 对接人（新增） | `wal_level=logical`、publication/slot、只读账号、主键与 updated_at 基线盘点 |
+| MQ/CDC 运维负责人（新增） | Kafka/Debezium 部署、slot 堆积监控、topic 规范执行、故障演练 |
+| 前端负责人 | 适配器管理页 stream 模式展示（如有页面需求） |
+| QA / 验收 | CI Gate 扩展、延迟/幂等/对账实测、UAT 用例 |
+| 数据 Owner（业务域代表） | 真实数据 A2/A3 抽检确认、口径确认 |
+
+---
+
+# 三、任务总表（按阶段直列，不分周）
+
+## 阶段一：真实连接器收口（V1.2 遗留）
+
+| 编号 | 任务 | 产出物 | 验收标准 | 依赖 | 责任 |
+| --- | --- | --- | --- | --- | --- |
+| T28 | ERP 真实 Connector | `edp_adapters` 真实 ERP 实现 | connect/healthcheck/pull/checkpoint/retry/replay 全实现；数据落 RAW | T03（V1.2 字段清单/接口文档） | 连接器 |
+| T29 | MES 真实 Connector | 同上 | 同上 | T03（V1.2） | 连接器 |
+| T31 | 真实数据跑通准入管道 | 抽样数据集（首链路对象） | A1–A4 全链路跑通，抽样双审留痕 | T28/T29 | 治理 |
+
+**阶段验收：** 真实系统抽样数据 100% 走完 `RECEIVED → ARCHIVED`；UAT 复跑（V1.2 门禁复检中待真实数据的 #9 项补齐）。
+
+## 阶段二：CDC+Kafka 实时链路（新）
+
+技术基线：**Debezium（PostgreSQL Connector / pgoutput）→ Kafka → 中台 Python 流消费者（aiokafka）→ SourceRecord → RAW 管道**。
+
+| 编号 | 任务 | 产出物 | 验收标准 | 依赖 | 责任 |
+| --- | --- | --- | --- | --- | --- |
+| T41 | 解冻裁决 | 书面裁决记录（"不引入 Kafka"条款局部解冻） | 解冻范围/理由/配套成本（运维/监控/对账）书面确认；仅限 CDC 专用，不得蔓延至实时计算/Lakehouse | 无 | PM |
+| T42 | 供应链 PostgreSQL 对端条件 | 对端基线清单（wal_level/publication/slot/只读账号/主键+updated_at 盘点） | `wal_level=logical` 开启；publication+slot 建立；只读账号权限最小化；核心表白名单含主键与增量标识（无主键表先补） | T41 | 供应链 DBA + 连接器 |
+| T43 | Debezium Connector 部署 | Kafka 单机/最小拓扑 + PostgreSQL Connector 配置 + topic 命名规范 | 表白名单（订单/库存/工单/物料变更）生效；topic 规范 `edp.{tenant}.{system}.{table}` 落地；变更事件含 before/after + `ts_ms`；slot 堆积监控 + 告警 | T42 | MQ/CDC 运维 |
+| T44 | 中台流消费端口 | `edp_adapters` 新增 stream 端口（`on_event → SourceRecord`，与拉取端口并存） | `occurred_at` 取源系统时间戳（ts_ms，禁用 now()）；source_id 取业务主键；UUIDv5 幂等落库；消费失败进 DLQ 可重放；并发消费不丢不重（offset 语义） | T43 | 平台 + 连接器 |
+| T45 | RAW 落库管道 | 消费 → RAW（raw_payload/batch_id/checksum）→ 复用 CLEAN/STANDARD/准入/血缘全链 | CDC 数据与拉取数据同管道同治理；血缘补 `source=capture` 分支；对账计数含 RAW | T44 | 平台 + 治理 |
+| T46 | 主数据定时增量兜底 | 物料/供应商/客户等低频主数据保留 `fetch_incremental` 双轨 | 双轨同源同口径；CDC 漏数可由拉取补偿；兜底任务受 ops.tasks 互斥保护 | T45 | 连接器 |
+| T47 | 对账与补数 | 对账任务 + 快照兜底补漏流程 | CDC 与拉取双轨对账偏差 0；中断恢复（Kafka/消费者故障演练）不丢不重；快照可重建 CDC 基线 | T46 | 治理 + 平台 |
+| T48 | 验收与演练 | 延迟/幂等/对账实测报告 + 故障演练记录 | 订单/库存变更端到端延迟 P99 达标；0 重复落库；Kafka 中断恢复演练通过；源库负载不超标 | T47 | QA + MQ/CDC 运维 |
+
+**阶段验收：** 供应链订单/库存变更从源库 commit 到中台 RAW 可见，端到端可测、可对账、可恢复；主数据双轨对账偏差 0。
+
+---
+
+# 四、门禁清单
+
+| 门禁 | 内容 | 通过条件 |
+| --- | --- | --- |
+| G0 | 架构门禁 | 边界/Owner/数据所有权冻结无异议，禁止跨域写表 |
+| G1 | Contract 门禁 | 契约 schema 全部入库，CI 双门禁通过（stream 端口契约同过） |
+| G2 | Data 门禁 | Result → Evidence 100% 可追溯，数据完整性/时效/一致性达标 |
+| G3 | Closed Loop 门禁 | Decision → Action → Result → Verify → Evidence 全链可追踪 |
+| G4 | Agent/EBMS 门禁 | EBMS/Agent 可用，Guard 有效，Trace 完整，official_only 生效 |
+| **G5** | **实时链路门禁（新增）** | 端到端 P99 达标；幂等 0 重复；断点恢复演练通过；CDC 与拉取对账偏差 0；slot 堆积无告警积压 |
+
+---
+
+# 五、风险与应对
+
+| 风险 | 影响 | 应对 |
+| --- | --- | --- |
+| 真实 ERP/MES 对接资源不到位（V1.2 延续） | T28/T29 阻塞 | 对接人与文档时间表锁定；允许先以接口模拟器完成联调框架 |
+| PostgreSQL 逻辑复制权限拿不到（需 REPLICATION/超级用户） | T42 阻塞 | 提前与 DBA 书面确认；备选：只读库定时增量拉取兜底替代 |
+| 源库无主键/无 updated_at 表 | CDC 增量难做稳 | T42 盘点先行；无主键表先补主键或排除出白名单 |
+| Kafka/Debezium 运维成本 | 团队负担 | 单机/最小拓扑起步，仅 CDC 专用 topic；监控告警前置 |
+| slot 堆积/源库 WAL 膨胀 | 源库性能风险 | slot 监控 + 消费延迟告警；超限自动处置流程 |
+| 解冻范围蔓延（借机上 Flink/Lakehouse） | 范围失控 | G5 门禁限制：仅 Kafka+Debezium 专用，超出即否决 |
+| CDC 与拉取双轨口径冲突 | 数据不一致 | occurred_at/主键统一语义；T47 对账任务兜底 |
+
+---
+
+# 六、完成定义（DoD）
+
+每任务"完成"必须同时满足：
+
+1. 代码合入对应 `feat/*` 分支并通过 CI（lint + 测试 + 契约双门禁）；
+2. 迁移文件按版本规范编号，可 upgrade/downgrade；
+3. 涉及接口的任务：契约 schema 已更新并过 CI；
+4. 涉及状态/审核的任务：Event + Audit 留痕可演示；
+5. 验收标准栏逐项有实测证据（截图/日志/测试结果），不允许"口头完成"。
+
+---
+
+# 七、进度跟踪表
+
+| 任务 | 状态 | 阻塞项 | 备注 |
+| --- | --- | --- | --- |
+| T28 | 待外部资源 | V1.2 T03 字段清单/接口文档 | 延续 V1.2 |
+| T29 | 待外部资源 | 同上 | 延续 V1.2 |
+| T31 | 部分 | 依赖 T28/T29 | CSV 通道已先行验证 |
+| T41 | 未开始 | - | 解冻裁决（书面） |
+| T42 | 未开始 | 供应链 DBA 配合 | PostgreSQL 对端条件 |
+| T43 | 未开始 | T42 | Debezium + Kafka 部署 |
+| T44 | 未开始 | T43 | 中台流消费端口 |
+| T45 | 未开始 | T44 | RAW 落库管道 |
+| T46 | 未开始 | T45 | 主数据定时兜底双轨 |
+| T47 | 未开始 | T46 | 对账与补数 |
+| T48 | 未开始 | T47 | 验收与演练 |
+
+**技术基线（并入方案）：** Debezium PostgreSQL Connector（pgoutput）→ Kafka（CDC 专用 topic）→ 中台 aiokafka 消费者 → `SourceRecord`（occurred_at=源 ts_ms）→ RAW → CLEAN/STANDARD → 准入 A1–A4 → OFFICIAL；兼容 MySQL/SQL Server 等常用库，仅 Connector 配置不同。**本行动计划与 V1.3 方案同库维护，任何变更必须同步修订两处。**
