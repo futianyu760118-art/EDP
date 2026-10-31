@@ -1,0 +1,8 @@
+tenant=default (6753c341-6d8d-55ed-92e8-6107eb3025d5)  iterations=200  warmup=20
+app      = postgresql://edp_app:edp_app@localhost:15432/edp
+migrator = postgresql://edp_migrator:edp_dev@localhost:15432/edp
+
+mode                   app P95(ms)  migrator P95(ms)      diff
+events_risk_page              6.78              3.44     97.1%
+objects_type_page             2.00              2.58    -22.4%
+audit_filter_page             1.55              2.12    -26.6%

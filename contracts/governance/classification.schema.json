@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/governance/classification.schema.json",
+  "title": "Classification 多维分类契约",
+  "description": "Dimension + Taxonomy + Tag 三层分类体系（V1.1 第三十六/三十七节）。AI 只能建议，经规则校验/人工审核后才可成为正式分类；分类必须支持版本。",
+  "type": "object",
+  "required": [
+    "classification_id",
+    "dimension_id",
+    "object_ref",
+    "label",
+    "source",
+    "version",
+    "effective_from"
+  ],
+  "properties": {
+    "classification_id": { "type": "string", "format": "uuid" },
+    "dimension_id": { "type": "string", "description": "维度标识（如 CUSTOMER / PRODUCT / RISK）" },
+    "taxonomy_id": { "type": ["string", "null"], "description": "分类树节点标识" },
+    "object_ref": { "type": ["object", "string"], "description": "被分类对象引用" },
+    "label": { "type": "string", "minLength": 1, "description": "分类标签（如 战略客户 / 高风险）" },
+    "source": {
+      "type": "string",
+      "enum": ["RULE_BASED", "HUMAN_MAINTAINED", "AI_ASSISTED"],
+      "description": "分类来源；AI_ASSISTED 不得直接修改正式主数据分类"
+    },
+    "rule_ref": { "type": ["string", "null"], "description": "规则引用" },
+    "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "effective_from": { "type": "string", "format": "date-time" },
+    "effective_to": { "type": ["string", "null"], "format": "date-time" },
+    "approved_by": { "type": ["string", "null"], "description": "审核确认人" },
+    "approved_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": true
+}

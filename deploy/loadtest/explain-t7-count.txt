@@ -1,0 +1,46 @@
+﻿T7 count 归因复核 EXPLAIN (ANALYZE, BUFFERS) 归档（2026-09-22）
+- 环境：dev 栈 edp-dev-db-1（宿主 15432），edp_app 会话 + 事务级 set_config('app.tenant_id')（RLS 生效）
+- 数据：event.events 51059 行（seed --scale 116 + 压测写入后）
+- 查询 1：events 列表同过滤 count（WHERE risk_level='P1'）→ Index Only Scan idx_events_risk，Execution 0.096 ms
+- 查询 2：health ops_metrics _ingest_peak（24h 小时桶 max）→ Seq Scan（created_at 无索引，全表 1778 块），Execution 28.8 ms
+- 结论：pg_stat top20 中 mean 10.03 ms 的 count（calls=3713）为 health _ingest_peak，非 events 列表 count（后者亚毫秒，未入 top20）
+
+BEGIN
+              set_config              
+--------------------------------------
+ 6753c341-6d8d-55ed-92e8-6107eb3025d5
+(1 row)
+
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=5.28..5.29 rows=1 width=8) (actual time=0.039..0.040 rows=1 loops=1)
+   Buffers: shared hit=2
+   ->  Index Only Scan using idx_events_risk on events  (cost=0.15..5.15 rows=50 width=0) (actual time=0.033..0.035 rows=48 loops=1)
+         Index Cond: ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid) AND (risk_level = 'P1'::text))
+         Heap Fetches: 0
+         Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=195
+ Planning Time: 0.863 ms
+ Execution Time: 0.096 ms
+(10 rows)
+
+                                                                           QUERY PLAN                                                                            
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=3716.75..3716.76 rows=1 width=8) (actual time=28.708..28.709 rows=1 loops=1)
+   Buffers: shared hit=1778
+   ->  HashAggregate  (cost=3635.83..3676.29 rows=3237 width=16) (actual time=28.700..28.707 rows=1 loops=1)
+         Group Key: date_trunc('hour'::text, events.created_at)
+         Batches: 1  Memory Usage: 121kB
+         Buffers: shared hit=1778
+         ->  Seq Scan on events  (cost=0.00..3388.70 rows=49426 width=8) (actual time=0.010..25.294 rows=50938 loops=1)
+               Filter: ((created_at >= (now() - '24:00:00'::interval)) AND (tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid))
+               Rows Removed by Filter: 121
+               Buffers: shared hit=1778
+ Planning:
+   Buffers: shared hit=26
+ Planning Time: 0.175 ms
+ Execution Time: 28.828 ms
+(14 rows)
+
+ROLLBACK

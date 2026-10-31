@@ -1,0 +1,81 @@
+/* ==========================================================================
+   EDP 设计令牌 —— 原样拷贝自 `原型设计/pages/运营总览.html` <style id="theme-vars">
+   （行 8~76）+ 基础类（行 190~205）。亮/暗两套 --edp-* 变量单一事实来源。
+   ========================================================================== */
+
+:root {
+  --edp-background: #f7f8fc;
+  --edp-foreground: #172033;
+  --edp-card: #ffffff;
+  --edp-card-foreground: #172033;
+  --edp-popover: #ffffff;
+  --edp-popover-foreground: #172033;
+  --edp-primary: #5b5ce2;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #ececff;
+  --edp-primary-100: #dcdcff;
+  --edp-primary-200: #c6c7ed;
+  --edp-muted: #f3f4f7;
+  --edp-muted-foreground: #788298;
+  --edp-border: #e8ebf2;
+  --edp-input: #e8ebf2;
+  --edp-ring: #5b5ce2;
+  --edp-radius-small: 4px;
+  --edp-radius-medium: 8px;
+  --edp-radius-large: 12px;
+  --edp-radius-full: 9999px;
+
+  --edp-state-success: #12a47d;
+  --edp-state-success-bg: #e9fbf4;
+  --edp-state-warning: #d97706;
+  --edp-state-warning-bg: #fff7e8;
+  --edp-state-error: #df4f5f;
+  --edp-state-error-bg: #fff0f2;
+  --edp-state-info: #3b82f6;
+  --edp-state-info-bg: #edf5ff;
+
+  --edp-surface-2: #fbfcff;
+  --edp-ink-2: #68738a;
+  --edp-ink-3: #969fb1;
+
+  --edp-shadow-1: 0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.03);
+  --edp-shadow-2: 0 8px 24px -8px rgba(15,23,42,.12);
+  --edp-shadow-3: 0 24px 60px -20px rgba(15,23,42,.18);
+}
+
+.dark {
+  --edp-background: #0b0c14;
+  --edp-foreground: #e8ebf2;
+  --edp-card: #131520;
+  --edp-card-foreground: #e8ebf2;
+  --edp-popover: #131520;
+  --edp-popover-foreground: #e8ebf2;
+  --edp-primary: #7b7cf0;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #1e1f3a;
+  --edp-primary-100: #2a2b4d;
+  --edp-primary-200: #3d3e6a;
+  --edp-muted: #1c1e2c;
+  --edp-muted-foreground: #9aa1af;
+  --edp-border: #2a2d3d;
+  --edp-input: #2a2d3d;
+  --edp-ring: #7b7cf0;
+  --edp-surface-2: #181a28;
+  --edp-ink-2: #9aa1af;
+  --edp-ink-3: #6b7280;
+}
+
+/* Typography */
+.edp-font-sans {
+  font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+.edp-font-mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Noto Sans SC Mono", monospace;
+}
+
+/* 基础类（原型行 190~205） */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* 原型 [data-icon] mask 图标规则刻意不迁移：原型各页实际用 data-lucide（lucide UMD 替换），
+   无一元素带 data-icon；而 antd v5 的 SVG 图标（Modal 关闭 X / message 图标 / 表格排序等）
+   恰好带 data-icon 属性，此规则的 background-color:currentColor 会把它们涂成实心色块。 */

@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node / frontend
+node_modules/
+dist/
+storybook-static/
+coverage/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+
+# 备份验证运行日志（W5-T15a，脚本 deploy/scripts/backup-verify.ps1 追加式写入）
+deploy/logs/
+
+# 注意：uv.lock 与 pnpm-lock.yaml 属于锁定交付物，必须提交（勿加入忽略）
+
+# IDE 配置（工作区残留 .idea/ 不入库）
+.idea/

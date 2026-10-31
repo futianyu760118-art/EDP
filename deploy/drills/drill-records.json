@@ -1,0 +1,67 @@
+{
+  "items": [
+    {
+      "drill_type": "switchover",
+      "executed_at": "2026-09-21T13:22:47+08:00",
+      "topology": "etcd×1 + patroni×2 + haproxy + pgbackrest(repo=MinIO S3)",
+      "rto_seconds": 0,
+      "rpo_seconds": 0,
+      "result": "SUCCEEDED",
+      "readings": {
+        "切换成功率": "2/2（pg1→pg2→pg1 双向往返）",
+        "单写入口": "HAProxy 3.0（haproxy:3.0-alpine）按 Patroni /primary 自动跟随主库，切换全程 0 人工配置改动",
+        "api /healthz 探测": "80/80 全 200（两段各 40×1s）",
+        "最长中断": "0s（探测粒度 1s；与 W4 固定 patroni1 读数一致）",
+        "DB 写面经 HAProxy": "120/120 OK（psql SELECT pg_is_in_recovery()→f，两段各 60×~1s）；切换窗口内单次探测最长 ≈3.6s（连接重试+重派），0 失败",
+        "角色翻转检测": "HAProxy 日志：新主 UP 后 ≈0.6s 回挂、旧主 2 次 503 后 ≈1.1s 摘除；双 UP 重叠窗 ≈0.45~0.54s",
+        "切换后复制延迟": "lag=0；replay_lag NULL（新会话未采样，同 W4 第二段）",
+        "timeline 推进": "7 → 9（两轮 switchover 各 +1）",
+        "已建连接语义": "旧主 PG 重启断开池连接：worker 每段切换 1 次 dispatch failed 后自动恢复，RestartCount=0",
+        "W4 基线": "docs/demo/staging-drill.md（固定 patroni1：/healthz 40/40、0 中断、replay_lag 3.2ms）",
+        "W5 实测归档": "docs/demo/w5-drills.md T16 段"
+      },
+      "manual_url": "docs/demo/w5-drills.md"
+    },
+    {
+      "drill_type": "pitr",
+      "executed_at": "2026-09-21T11:22:07+08:00",
+      "topology": "etcd×1 + patroni×2 + pgbackrest(repo=MinIO S3)",
+      "rto_seconds": 22.1,
+      "rpo_seconds": 0,
+      "result": "SUCCEEDED",
+      "readings": {
+        "标记行": "pitr-marker-20260921-112207（occurred_at 2026-09-21 03:22:07.999 UTC，event_id=b40af9df）",
+        "目标时点": "marker+60s = 2026-09-21 03:23:07.999924+00:00",
+        "恢复备份集": "20260921-025634F（S3 restore 13.9s）",
+        "RTO 构成": "冷启动容器 -> restore 13.9s -> WAL 重放 -> promote -> 可断言，共 22.1s",
+        "RPO 口径": "0 = 目标时点前提交零丢失（marker 在恢复库存在）；WAL 归档覆盖余量 4.1s（...001C @ 03:23:12 vs 目标）",
+        "断言": "15433 TCP 可连；marker count=1；end-marker count=0（时间点精度负向断言）；platform.tenants 主=恢复=1",
+        "WAL 推进": "pg_switch_wal×2：...001A->001B(marker)->001C(end-marker)",
+        "恢复实例形态": "同 patroni 镜像原生 postgres 单实例（不走 patroni，端口 15433——15432 被 dev 栈 db 常驻占用）",
+        "W5 实测归档": "docs/demo/w5-drills.md T15b 段"
+      },
+      "manual_url": "docs/demo/w5-drills.md"
+    },
+    {
+      "drill_type": "tenant_restore",
+      "executed_at": "2026-09-21T13:11:21+08:00",
+      "topology": "etcd×1 + patroni×2 + pgbackrest(repo=MinIO S3)",
+      "rto_seconds": 23.8,
+      "rpo_seconds": 0,
+      "result": "SUCCEEDED",
+      "readings": {
+        "租户": "demo-b（b0000000-0000-4000-8000-00000000000b，固定 UUID 幂等重跑）",
+        "误删范围": "event.events×120 + evidence.records×40（platform.tenants 行保留 count=1）",
+        "增量备份": "20260921-025634F_20260921-051115I（05:11:15→05:11:20 UTC，5s，WAL ...0024；full+3 incr 链）",
+        "隔离恢复": "一次性容器 edp-tenant-restore（同 patroni 镜像原生单实例 :15434，--target-timeline=current）",
+        "回放": "容器内 psql|psql COPY 管道（CSV 不落宿主盘）：COPY 120 / COPY 40",
+        "断言": "误删前/隔离库/回放后计数全等（events 120/120/120，evidence 40/40/40）；checksum 抽样 5/5 一致",
+        "RTO 口径": "23.8s = 误删 -> 隔离恢复 -> 回放 -> 断言全过（目标 ≤4h）",
+        "RPO 口径": "0 = 整批找回（行数+checksum 抽样一致）",
+        "api 等价断言": "DB 层等价（tenant-b 成员 JWT 未配置）；api /healthz 演练后 200，主栈零影响",
+        "W5 实测归档": "docs/demo/w5-drills.md T15c 段"
+      },
+      "manual_url": "docs/demo/w5-drills.md"
+    }
+  ]
+}

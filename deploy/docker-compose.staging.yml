@@ -1,0 +1,241 @@
+name: edp-staging
+
+# EDP staging 最小 HA 拓扑（T14 / EDP-021）：etcd×1 + patroni×2（PG16 主从）+ pgbackrest
+# + 应用层（api/worker/web 复用 dev compose 的 build 上下文与 env 形态）。
+# W5-T14（EDP-031 前置）：+ MinIO 对象存储，pgbackrest repo1 迁 S3（bucket edp-backups）。
+#
+# 端口（避开 dev 5432/15432、8000/18000、5173/9080）：
+#   api 18010 / web 9090 / patroni restapi 8008(patroni1)、8009(patroni2)
+#   haproxy 5432 仅 compose 内网（haproxy:5432），不映射宿主端口
+#
+# 单写入口约定（W5-T16 起自动跟随）：api/worker 的 DATABASE_URL 统一指向
+# haproxy:5432——HAProxy 按 Patroni REST API（8008 /primary）健康检查自动跟随
+# 主库（仅 leader 200，replica 503 摘除），switchover 后无需人工改配置。
+# 降级：HAProxy 不可用时回退固定 patroni1:5432（见 docs/demo/w5-drills.md T16 段）。
+#
+# 用法（部署/回滚/演练统一走脚本）：
+#   powershell -File deploy/scripts/deploy-staging.ps1 -Action deploy|rollback|drill
+
+x-patroni-build: &patroni-build
+  # 官方 zalando/patroni 镜像本机网络不可拉取 → deploy/patroni/Dockerfile 自建（PG16 等价）
+  context: ./patroni
+
+services:
+  # ---- HA 基础设施 ----
+  etcd:
+    # distroless 镜像（无 shell）：healthcheck 用 exec 直跑 etcdctl；QUOTA 4GB 经 CLI 下发
+    image: quay.io/coreos/etcd:v3.5.16
+    command:
+      - /usr/local/bin/etcd
+      - -name
+      - etcd0
+      - -data-dir
+      - /etcd-data
+      - -listen-client-urls
+      - http://0.0.0.0:2379
+      - -advertise-client-urls
+      - http://etcd:2379
+      - -listen-peer-urls
+      - http://0.0.0.0:2380
+      - -initial-advertise-peer-urls
+      - http://etcd:2380
+      - -initial-cluster
+      - etcd0=http://etcd:2380
+      - -quota-backend-bytes=4294967296  # QUOTA_BACKEND_GB=4
+    volumes:
+      - etcd:/etcd-data
+    healthcheck:
+      test: ["CMD", "etcdctl", "--endpoints=http://localhost:2379", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  patroni1:
+    build: *patroni-build
+    image: edp-staging/patroni:pg16
+    user: postgres
+    command: ["patroni", "/etc/patroni.yml"]
+    depends_on:
+      etcd:
+        condition: service_healthy
+    environment:
+      ETCD_HOSTS: etcd:2379
+      # pgbackrest S3 密钥经环境变量注入（W6 安全剔除：配置/仓库不再含密钥；本地 .env 提供）
+      PGBACKREST_REPO1_S3_KEY_SECRET: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 未设置（本地 .env 注入，勿入库）}
+    ports:
+      - "8008:8008"
+    volumes:
+      - patroni1:/var/lib/postgresql/data
+      - ./patroni/patroni1.yml:/etc/patroni.yml:ro
+      # pg-init（账号 SQL）供部署脚本 psql -f 执行；pgbackrest 本地备份模式所需挂载
+      - ./pg-init:/docker-entrypoint-initdb.d:ro
+      - ./pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - backups:/pgbackrest
+    healthcheck:
+      # /patroni 对任何活着的节点（主/从）都返回 200；/health 仅对 leader 200
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8008/patroni || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  patroni2:
+    build: *patroni-build
+    image: edp-staging/patroni:pg16
+    user: postgres
+    command: ["patroni", "/etc/patroni.yml"]
+    depends_on:
+      etcd:
+        condition: service_healthy
+    environment:
+      ETCD_HOSTS: etcd:2379
+      # pgbackrest S3 密钥经环境变量注入（W6 安全剔除，同 patroni1）
+      PGBACKREST_REPO1_S3_KEY_SECRET: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 未设置（本地 .env 注入，勿入库）}
+    ports:
+      - "8009:8008"
+    volumes:
+      - patroni2:/var/lib/postgresql/data
+      - ./patroni/patroni2.yml:/etc/patroni.yml:ro
+      - ./pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - backups:/pgbackrest
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8008/patroni || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # ---- 单写入口（W5-T16 / W4-T14 后续项）：HAProxy 按 Patroni /primary 自动跟随主库 ----
+  # 配置与检查口径见 deploy/haproxy/haproxy.cfg 头部注释
+  haproxy:
+    image: haproxy:3.0-alpine
+    depends_on:
+      patroni1:
+        condition: service_healthy
+      patroni2:
+        condition: service_healthy
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    # stats socket 需可写目录（镜像默认以 haproxy 用户运行）
+    tmpfs:
+      - /var/run/haproxy:mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5432 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # pgbackrest：repo keeper（W5-T14 起为 S3 repo：仅挂配置；备份命令经 patroni1 exec 本地执行，
+  # 首次全量备份命令见 deploy/pgbackrest/pgbackrest.conf 头部注释）
+  # W5-T15a（EDP-031）：入口改挂 backup-cron.sh——容器内循环脚本每日 02:00 UTC 全量备份
+  #   （keeper 无数据目录，经 psql COPY TO PROGRAM 在 patroni1 本地执行，见脚本头注释）
+  pgbackrest:
+    build: *patroni-build
+    image: edp-staging/patroni:pg16
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup-cron.sh"]
+    environment:
+      BACKUP_PGHOST: patroni1
+      # 演示值（同 deploy-staging.ps1 迁移账号口令）；生产经 secret manager 注入
+      PGPASSWORD: edp_dev
+      # pgbackrest S3 密钥经环境变量注入（W6 安全剔除；keeper 的 info 读取 repo 亦需）
+      PGBACKREST_REPO1_S3_KEY_SECRET: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 未设置（本地 .env 注入，勿入库）}
+    depends_on:
+      patroni1:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      init-minio:
+        condition: service_completed_successfully
+    volumes:
+      - ./pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ./pgbackrest/backup-cron.sh:/usr/local/bin/backup-cron.sh:ro
+      # W4 本地 repo 卷保留为降级预案（repo1 已迁 S3；MinIO 不可用时回退
+      # repo1-type=posix + repo1-path=/pgbackrest/repo，见 docs/demo/w5-drills.md T14 降级段）
+      - backups:/pgbackrest
+
+  # ---- 对象存储（W5-T14 / EDP-031 前置）：MinIO = pgbackrest S3 repo ----
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      # 密钥经本地 .env 注入（W6 安全剔除：仓库不含真实凭据；生产经 secret manager）
+      MINIO_ROOT_USER: edp_minio
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 未设置（本地 .env 注入，勿入库）}
+    ports:
+      # 宿主端口避开已占（5432/15432/8000/18000/5173/9080/8008/8009/9090）
+      - "19000:9000" # S3 API（compose 网内 pgbackrest 仍走 minio:9000）
+      - "19001:9001" # console（浏览器 http://localhost:19001）
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # 一次性 job：等 minio ready → mc alias → 建 edp-backups bucket（幂等；restart: no）
+  init-minio:
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: edp_minio
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD 未设置（本地 .env 注入，勿入库）}
+    volumes:
+      - ./scripts/init-minio.sh:/usr/local/bin/init-minio.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/init-minio.sh"]
+
+  # ---- 应用层（build/env 复用 docker-compose.dev.yml 形态）----
+  api:
+    build:
+      context: ../backend
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      haproxy:
+        condition: service_healthy
+    environment:
+      # 单写入口（W5-T16）：经 HAProxy 自动跟随主库，勿再固定 patroni1/patroni2
+      EDP_DATABASE_URL: postgresql+asyncpg://edp_app:edp_app@haproxy:5432/edp
+      # JWT 密钥经本地 .env 注入（W6 安全剔除：仓库不含真实密钥；生产经 secret manager，与 worker 同值）
+      EDP_JWT_SECRET: ${EDP_JWT_SECRET:?EDP_JWT_SECRET 未设置（本地 .env 注入，勿入库）}
+      # 演练记录 JSON 供给（W5 终审 I-1）：GET /admin/drills 读此路径
+      EDP_DRILLS_FILE: /workspace/deploy/drills/drill-records.json
+    command: ["uvicorn", "edp_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "18010:8000"
+    volumes:
+      # 镜像构建上下文为 backend/（不含 deploy/），演练记录经只读挂载供给
+      - ./drills/drill-records.json:/workspace/deploy/drills/drill-records.json:ro
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: apps/worker/Dockerfile
+    depends_on:
+      haproxy:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      # 单写入口（W5-T16）：经 HAProxy 自动跟随主库
+      EDP_DATABASE_URL: postgresql+asyncpg://edp_app:edp_app@haproxy:5432/edp
+      # JWT 密钥经本地 .env 注入（W6 安全剔除；与 api 同值）
+      EDP_JWT_SECRET: ${EDP_JWT_SECRET:?EDP_JWT_SECRET 未设置（本地 .env 注入，勿入库）}
+
+  # 前端：nginx 托管 SPA + /api 反代到 api 服务（VITE_API_BASE 构建期置空 = 同源相对路径）
+  web:
+    build:
+      context: ../frontend
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE: ""
+    depends_on:
+      - api
+    ports:
+      - "9090:80"
+
+volumes:
+  etcd:
+  patroni1:
+  patroni2:
+  backups:
+  minio-data:

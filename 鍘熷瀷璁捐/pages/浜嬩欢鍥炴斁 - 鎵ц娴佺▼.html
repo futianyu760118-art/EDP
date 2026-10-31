@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事件流 · AEOS EDP</title>
+    <style id="theme-vars">
+:root {
+  --edp-background: #f7f8fc;
+  --edp-foreground: #172033;
+  --edp-card: #ffffff;
+  --edp-card-foreground: #172033;
+  --edp-popover: #ffffff;
+  --edp-popover-foreground: #172033;
+  --edp-primary: #5b5ce2;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #ececff;
+  --edp-primary-100: #dcdcff;
+  --edp-primary-200: #c6c7ed;
+  --edp-muted: #f3f4f7;
+  --edp-muted-foreground: #788298;
+  --edp-border: #e8ebf2;
+  --edp-input: #e8ebf2;
+  --edp-ring: #5b5ce2;
+  --edp-radius-small: 4px;
+  --edp-radius-medium: 8px;
+  --edp-radius-large: 12px;
+  --edp-radius-full: 9999px;
+
+  --edp-state-success: #12a47d;
+  --edp-state-success-bg: #e9fbf4;
+  --edp-state-warning: #d97706;
+  --edp-state-warning-bg: #fff7e8;
+  --edp-state-error: #df4f5f;
+  --edp-state-error-bg: #fff0f2;
+  --edp-state-info: #3b82f6;
+  --edp-state-info-bg: #edf5ff;
+
+  --edp-surface-2: #fbfcff;
+  --edp-ink-2: #68738a;
+  --edp-ink-3: #969fb1;
+
+  --edp-shadow-1: 0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.03);
+  --edp-shadow-2: 0 8px 24px -8px rgba(15,23,42,.12);
+  --edp-shadow-3: 0 24px 60px -20px rgba(15,23,42,.18);
+}
+
+.dark {
+  --edp-background: #0b0c14;
+  --edp-foreground: #e8ebf2;
+  --edp-card: #131520;
+  --edp-card-foreground: #e8ebf2;
+  --edp-popover: #131520;
+  --edp-popover-foreground: #e8ebf2;
+  --edp-primary: #7b7cf0;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #1e1f3a;
+  --edp-primary-100: #2a2b4d;
+  --edp-primary-200: #3d3e6a;
+  --edp-muted: #1c1e2c;
+  --edp-muted-foreground: #9aa1af;
+  --edp-border: #2a2d3d;
+  --edp-input: #2a2d3d;
+  --edp-ring: #7b7cf0;
+  --edp-surface-2: #181a28;
+  --edp-ink-2: #9aa1af;
+  --edp-ink-3: #6b7280;
+}
+
+/* Typography */
+.edp-font-sans {
+  font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+.edp-font-mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Noto Sans SC Mono", monospace;
+}
+
+/* Surface */
+.edp-bg-page { background-color: var(--edp-background); }
+.edp-bg-card { background-color: var(--edp-card); }
+.edp-bg-muted { background-color: var(--edp-muted); }
+.edp-bg-primary { background-color: var(--edp-primary); }
+.edp-bg-primary-50 { background-color: var(--edp-primary-50); }
+
+/* Text */
+.edp-text-ink { color: var(--edp-foreground); }
+.edp-text-muted { color: var(--edp-muted-foreground); }
+.edp-text-primary { color: var(--edp-primary); }
+.edp-text-on-primary { color: var(--edp-primary-foreground); }
+
+/* Border */
+.edp-border { border: 1px solid var(--edp-border); }
+.edp-border-t { border-top: 1px solid var(--edp-border); }
+.edp-border-b { border-bottom: 1px solid var(--edp-border); }
+.edp-border-r { border-right: 1px solid var(--edp-border); }
+
+/* Radius */
+.edp-rounded-sm { border-radius: var(--edp-radius-small); }
+.edp-rounded-md { border-radius: var(--edp-radius-medium); }
+.edp-rounded-lg { border-radius: var(--edp-radius-large); }
+.edp-rounded-full { border-radius: var(--edp-radius-full); }
+
+/* Shadow */
+.edp-shadow-1 { box-shadow: var(--edp-shadow-1); }
+.edp-shadow-2 { box-shadow: var(--edp-shadow-2); }
+.edp-shadow-3 { box-shadow: var(--edp-shadow-3); }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--edp-background);
+    --color-foreground: var(--edp-foreground);
+    --color-card: var(--edp-card);
+    --color-card-foreground: var(--edp-card-foreground);
+    --color-popover: var(--edp-popover);
+    --color-popover-foreground: var(--edp-popover-foreground);
+    --color-primary: var(--edp-primary);
+    --color-primary-foreground: var(--edp-primary-foreground);
+    --color-muted: var(--edp-muted);
+    --color-muted-foreground: var(--edp-muted-foreground);
+    --color-border: var(--edp-border);
+    --color-input: var(--edp-input);
+    --color-ring: var(--edp-ring);
+    --radius-sm: var(--edp-radius-small);
+    --radius-md: var(--edp-radius-medium);
+    --radius-lg: var(--edp-radius-large);
+  }
+  @layer base {
+    body { background: var(--edp-background); color: var(--edp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--edp-background); }
+      .text-background { color: var(--edp-background); }
+      .border-background { border-color: var(--edp-background); }
+      .ring-background { --tw-ring-color: var(--edp-background); }
+      .bg-foreground { background-color: var(--edp-foreground); }
+      .text-foreground { color: var(--edp-foreground); }
+      .border-foreground { border-color: var(--edp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--edp-foreground); }
+      .bg-card { background-color: var(--edp-card); }
+      .text-card { color: var(--edp-card); }
+      .border-card { border-color: var(--edp-card); }
+      .ring-card { --tw-ring-color: var(--edp-card); }
+      .bg-card-foreground { background-color: var(--edp-card-foreground); }
+      .text-card-foreground { color: var(--edp-card-foreground); }
+      .border-card-foreground { border-color: var(--edp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--edp-card-foreground); }
+      .bg-popover { background-color: var(--edp-popover); }
+      .text-popover { color: var(--edp-popover); }
+      .border-popover { border-color: var(--edp-popover); }
+      .ring-popover { --tw-ring-color: var(--edp-popover); }
+      .bg-popover-foreground { background-color: var(--edp-popover-foreground); }
+      .text-popover-foreground { color: var(--edp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--edp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--edp-popover-foreground); }
+      .bg-primary { background-color: var(--edp-primary); }
+      .text-primary { color: var(--edp-primary); }
+      .border-primary { border-color: var(--edp-primary); }
+      .ring-primary { --tw-ring-color: var(--edp-primary); }
+      .bg-primary-foreground { background-color: var(--edp-primary-foreground); }
+      .text-primary-foreground { color: var(--edp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--edp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--edp-primary-foreground); }
+      .bg-muted { background-color: var(--edp-muted); }
+      .text-muted { color: var(--edp-muted); }
+      .border-muted { border-color: var(--edp-muted); }
+      .ring-muted { --tw-ring-color: var(--edp-muted); }
+      .bg-muted-foreground { background-color: var(--edp-muted-foreground); }
+      .text-muted-foreground { color: var(--edp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--edp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--edp-muted-foreground); }
+      .bg-border { background-color: var(--edp-border); }
+      .text-border { color: var(--edp-border); }
+      .border-border { border-color: var(--edp-border); }
+      .ring-border { --tw-ring-color: var(--edp-border); }
+      .bg-input { background-color: var(--edp-input); }
+      .text-input { color: var(--edp-input); }
+      .border-input { border-color: var(--edp-input); }
+      .ring-input { --tw-ring-color: var(--edp-input); }
+      .bg-ring { background-color: var(--edp-ring); }
+      .text-ring { color: var(--edp-ring); }
+      .border-ring { border-color: var(--edp-ring); }
+      .ring-ring { --tw-ring-color: var(--edp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+    <style id="critical-layout">
+      .page-shell { display: flex; min-height: 100vh; }
+      .sidebar { width: 250px; flex: 0 0 250px; }
+      .topbar { height: 66px; }
+      .main-stage { flex: 1 1 auto; margin-left: 250px; padding-top: 66px; }
+      .page-content { padding: 24px; max-width: 1440px; }
+      .kpi-band { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+      .bg-primary-50 { background-color: var(--edp-primary-50); }
+      .bg-state-success { background-color: var(--edp-state-success); }
+      .text-state-success { color: var(--edp-state-success); }
+      .bg-state-success-bg { background-color: var(--edp-state-success-bg); }
+      .bg-state-warning { background-color: var(--edp-state-warning); }
+      .text-state-warning { color: var(--edp-state-warning); }
+      .bg-state-warning-bg { background-color: var(--edp-state-warning-bg); }
+      .bg-state-error { background-color: var(--edp-state-error); }
+      .text-state-error { color: var(--edp-state-error); }
+      .bg-state-error-bg { background-color: var(--edp-state-error-bg); }
+      .bg-state-info { background-color: var(--edp-state-info); }
+      .text-state-info { color: var(--edp-state-info); }
+      .bg-state-info-bg { background-color: var(--edp-state-info-bg); }
+      .event-table { width: 100%; border-collapse: collapse; }
+      .event-table th, .event-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--edp-border); }
+      .event-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--edp-muted-foreground); font-weight: 500; }
+      .event-table td { font-size: 12px; color: var(--edp-foreground); }
+      @media (max-width: 1200px) {
+        .kpi-band { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (max-width: 768px) {
+        .kpi-band { grid-template-columns: 1fr; }
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+<aside class="fixed left-0 top-0 bottom-0 w-[250px] bg-card border-r border-border z-20 flex flex-col sidebar">
+  <div class="h-[70px] flex items-center px-4 border-b border-border">
+    <div class="w-9 h-9 rounded-lg bg-primary text-primary-foreground grid place-items-center font-extrabold text-lg shadow-sm">E</div>
+    <div class="ml-2.5">
+      <b class="text-sm">AEOS EDP</b>
+      <span class="block text-[10px] text-muted-foreground">Evidence Data Platform</span>
+    </div>
+  </div>
+  <div class="p-3.5">
+    <button class="w-full border border-border bg-card rounded-xl p-2.5 flex items-center gap-2 hover:bg-muted transition-colors" data-dom-id="tenant-switch">
+      <div class="w-7 h-7 rounded-lg bg-primary-50 text-primary grid place-items-center text-xs font-extrabold">AC</div>
+      <div class="min-w-0 flex-1 text-left">
+        <b class="text-xs block truncate">ACME · 华东事业群</b>
+        <span class="text-[10px] text-muted-foreground block truncate">Enterprise · 生产环境</span>
+      </div>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-muted-foreground"></i>
+    </button>
+  </div>
+  <nav class="flex-1 px-2.5 py-2 overflow-y-auto">
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-overview" data-nav="overview">
+      <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i>
+      <span>运营总览</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">数据工作台</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-objects" data-nav="objects">
+      <i data-lucide="layers" class="w-[18px] h-[18px]"></i>
+      <span>业务对象</span>
+    </button>
+    <button class="nav-item active w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-events" data-nav="events" data-active="true">
+      <i data-lucide="zap" class="w-[18px] h-[18px]"></i>
+      <span>事件流</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-evidence" data-nav="evidence">
+      <i data-lucide="shield-check" class="w-[18px] h-[18px]"></i>
+      <span>证据库</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">运维监控</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-quality" data-nav="quality">
+      <i data-lucide="triangle-alert" class="w-[18px] h-[18px]"></i>
+      <span>数据质量</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-governance" data-nav="governance">
+      <i data-lucide="scroll-text" class="w-[18px] h-[18px]"></i>
+      <span>审计日志</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-systems" data-nav="systems">
+      <i data-lucide="plug" class="w-[18px] h-[18px]"></i>
+      <span>适配器管理</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">平台配置</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-tenants" data-nav="tenants">
+      <i data-lucide="building-2" class="w-[18px] h-[18px]"></i>
+      <span>租户管理</span>
+    </button>
+  </nav>
+  <div class="p-3.5 border-t border-border">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-full bg-primary-50 text-primary grid place-items-center text-[11px] font-extrabold">YL</div>
+      <div class="flex-1 min-w-0">
+        <b class="text-xs block truncate">Y. Liu</b>
+        <span class="text-[10px] text-muted-foreground block truncate">Workspace Admin</span>
+      </div>
+      <button class="w-8 h-8 rounded-lg border border-border bg-card grid place-items-center text-muted-foreground hover:bg-muted" data-dom-id="settings-btn">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<header class="fixed top-0 left-[250px] right-0 h-[66px] bg-card/92 backdrop-blur border-b border-border z-10 flex items-center justify-between px-6 topbar">
+  <div class="flex items-center gap-4">
+    <div class="text-xs text-muted-foreground">EDP / <b class="text-foreground font-semibold" data-slot="crumb">事件流</b></div>
+    <div class="relative hidden md:block">
+      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"></i>
+      <input type="text" placeholder="搜索对象、事件、证据…" class="h-9 w-[330px] pl-9 pr-3 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent" data-dom-id="global-search" />
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <button class="h-9 px-2.5 border border-border bg-card rounded-lg text-muted-foreground hover:bg-muted flex items-center gap-1.5" data-dom-id="notifications-btn">
+      <i data-lucide="bell" class="w-4 h-4"></i>
+      <span class="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">3</span>
+    </button>
+    <button class="h-9 px-3 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-1.5" data-dom-id="command-palette">
+      <i data-lucide="command" class="w-4 h-4"></i>
+      <span>K</span>
+    </button>
+    <button class="h-9 px-2.5 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-2">
+      <div class="w-6 h-6 rounded-full bg-primary-50 text-primary grid place-items-center text-[9px] font-extrabold">YL</div>
+      <span>Y. Liu</span>
+      <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+    </button>
+  </div>
+</header>
+
+<main class="main-stage bg-background">
+  <div class="page-content">
+    <!-- Page head -->
+    <section class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+      <div>
+        <h1 class="text-xl font-semibold text-foreground">事件流</h1>
+        <p class="text-sm text-muted-foreground mt-1">事件存储 · 支持事件类型、对象、发生时间/接入时间、幂等键和回放</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="h-9 px-3 border border-border bg-card text-foreground rounded-lg text-xs font-medium hover:bg-muted flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          新建订阅
+        </button>
+        <button class="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 flex items-center gap-1.5" data-dom-id="event-replay">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          回放事件
+        </button>
+      </div>
+    </section>
+
+    <!-- KPI band -->
+    <section class="kpi-band mb-4">
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">24H 事件</div>
+          <div class="text-xl font-semibold text-foreground">18,421</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">峰值 2,104 / 小时</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="zap" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">P95 接入延迟</div>
+          <div class="text-xl font-semibold text-foreground">0.82s</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">环比下降 0.11s</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="command" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">幂等命中率</div>
+          <div class="text-xl font-semibold text-foreground">0.01%</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">重复事件极少</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">死信队列</div>
+          <div class="text-xl font-semibold text-foreground">3</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">待人工复核</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-state-warning-bg text-state-warning grid place-items-center"><i data-lucide="triangle-alert" class="w-4 h-4"></i></div>
+      </div>
+    </section>
+
+    <!-- Toolbar -->
+    <section class="bg-card border border-border rounded-xl p-3 mb-4">
+      <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"></i>
+          <input type="text" placeholder="搜索事件 ID、对象、内容…" class="h-9 w-full pl-9 pr-3 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent" data-dom-id="event-search" />
+        </div>
+        <div class="flex items-center gap-2">
+          <select class="h-9 px-3 text-xs bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
+            <option>全部事件类型</option>
+            <option>purchase_delayed</option>
+            <option>inventory_changed</option>
+            <option>order_created</option>
+            <option>result_created</option>
+            <option>decision_approved</option>
+            <option>action_completed</option>
+            <option>dq_exception</option>
+            <option>connector_failed</option>
+          </select>
+          <select class="h-9 px-3 text-xs bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
+            <option>最近 24 小时</option>
+            <option>最近 7 天</option>
+            <option>最近 30 天</option>
+          </select>
+          <button class="h-9 px-3 border border-border bg-card text-muted-foreground rounded-lg text-xs font-medium hover:bg-muted flex items-center gap-1.5">
+            <i data-lucide="filter" class="w-4 h-4"></i>
+            筛选
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Wide table -->
+    <section class="bg-card border border-border rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="event-table">
+          <thead>
+            <tr>
+              <th>事件</th>
+              <th>类型</th>
+              <th>对象</th>
+              <th>描述</th>
+              <th>发生时间</th>
+              <th>接入耗时</th>
+              <th>来源</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="font-mono text-xs">evt-8f32</span></td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-warning-bg text-state-warning">purchase_delayed</span></td>
+              <td><span class="font-mono text-xs">ORD-202609-001</span></td>
+              <td class="max-w-[240px] truncate">供应商 S-118 预计交期延迟 14 天</td>
+              <td>09-10 10:41</td>
+              <td>120ms</td>
+              <td>ERP-S4</td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">DELIVERED</span></td>
+              <td><a href="#" class="text-xs text-primary hover:underline">详情</a></td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-xs">evt-7ac0</span></td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-info-bg text-state-info">inventory_changed</span></td>
+              <td><span class="font-mono text-xs">ORD-202609-001</span></td>
+              <td class="max-w-[240px] truncate">物料 X 当前可用量 0，缺口 1000</td>
+              <td>09-10 10:40</td>
+              <td>95ms</td>
+              <td>WMS</td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">DELIVERED</span></td>
+              <td><a href="#" class="text-xs text-primary hover:underline">详情</a></td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-xs">evt-63da</span></td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-primary-50 text-primary">order_created</span></td>
+              <td><span class="font-mono text-xs">ORD-202609-001</span></td>
+              <td class="max-w-[240px] truncate">订单创建并通过基础校验</td>
+              <td>09-08 14:22</td>
+              <td>210ms</td>
+              <td>ERP-S4</td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">DELIVERED</span></td>
+              <td><a href="#" class="text-xs text-primary hover:underline">详情</a></td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-xs">evt-52e1</span></td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-error-bg text-state-error">result_created</span></td>
+              <td><span class="font-mono text-xs">ORD-202609-001</span></td>
+              <td class="max-w-[240px] truncate">Delivery.OrderRisk 评分 92 / L3</td>
+              <td>09-10 10:42</td>
+              <td>180ms</td>
+              <td>DQ Engine</td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">DELIVERED</span></td>
+              <td><a href="#" class="text-xs text-primary hover:underline">详情</a></td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-xs">evt-31bb</span></td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">decision_approved</span></td>
+              <td><span class="font-mono text-xs">DC-1048</span></td>
+              <td class="max-w-[240px] truncate">审批通过：加急采购 + 替代料评估</td>
+              <td>09-10 11:08</td>
+              <td>85ms</td>
+              <td>Human</td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">DELIVERED</span></td>
+              <td><a href="#" class="text-xs text-primary hover:underline">详情</a></td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-xs">evt-18ac</span></td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-primary-50 text-primary">action_completed</span></td>
+              <td><span class="font-mono text-xs">ACT-7741</span></td>
+              <td class="max-w-[240px] truncate">采购加急任务完成，等待业务结果验证</td>
+              <td>09-10 12:20</td>
+              <td>140ms</td>
+              <td>Action</td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">DELIVERED</span></td>
+              <td><a href="#" class="text-xs text-primary hover:underline">详情</a></td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-xs">evt-17a1</span></td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-error-bg text-state-error">dq_exception</span></td>
+              <td><span class="font-mono text-xs">CUST-771</span></td>
+              <td class="max-w-[240px] truncate">客户 ID 在 ERP / MDM 中存在冲突映射</td>
+              <td>09-10 10:31</td>
+              <td>110ms</td>
+              <td>DQ Engine</td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">DELIVERED</span></td>
+              <td><a href="#" class="text-xs text-primary hover:underline">详情</a></td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-xs">evt-11c2</span></td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-warning-bg text-state-warning">connector_failed</span></td>
+              <td><span class="font-mono text-xs">PO-38117</span></td>
+              <td class="max-w-[240px] truncate">PROCURE-X 查询超时，第 2 次重试成功</td>
+              <td>09-10 09:44</td>
+              <td>2.4s</td>
+              <td>Adapter</td>
+              <td><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">DELIVERED</span></td>
+              <td><a href="#" class="text-xs text-primary hover:underline">详情</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-3 border-t border-border flex items-center justify-between">
+        <div class="text-[11px] text-muted-foreground">显示 1–8 条，共 18,421 条</div>
+        <div class="flex items-center gap-1">
+          <button class="h-8 px-2.5 border border-border rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-50" disabled><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+          <button class="h-8 px-3 bg-primary text-primary-foreground rounded-lg text-xs font-medium">1</button>
+          <button class="h-8 px-3 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted">2</button>
+          <button class="h-8 px-3 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted">3</button>
+          <button class="h-8 px-2.5 border border-border rounded-lg text-muted-foreground hover:bg-muted"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- Wizard overlay -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm" data-dom-id="wizard-overlay">
+  <div class="w-full max-w-[720px] bg-card border border-border rounded-xl shadow-3 flex flex-col max-h-[calc(100vh-48px)] mx-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></div>
+        <h2 class="text-lg font-semibold text-foreground">事件回放</h2>
+      </div>
+      <button class="w-8 h-8 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted grid place-items-center" data-dom-id="wizard-close" aria-label="关闭">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Stepper -->
+    <div class="px-6 pt-5 pb-2">
+      <div class="flex items-center">
+        <!-- Step 1 -->
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-primary text-primary-foreground grid place-items-center text-[10px] font-semibold">1</div>
+          <div>
+            <div class="text-xs font-medium text-foreground">选择事件</div>
+            <div class="text-[10px] text-muted-foreground truncate max-w-[120px]">EVT-20260910-001</div>
+          </div>
+        </div>
+        <div class="flex-1 h-px bg-border mx-3"></div>
+        <!-- Step 2 -->
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-primary text-primary-foreground grid place-items-center text-[10px] font-semibold">2</div>
+          <div>
+            <div class="text-xs font-medium text-foreground">配置参数</div>
+            <div class="text-[10px] text-muted-foreground">目标与模式</div>
+          </div>
+        </div>
+        <div class="flex-1 h-px bg-border mx-3"></div>
+        <!-- Step 3 -->
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-muted text-muted-foreground border border-border grid place-items-center text-[10px] font-semibold">3</div>
+          <div>
+            <div class="text-xs font-medium text-foreground">确认执行</div>
+            <div class="text-[10px] text-muted-foreground">核对与下发</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 content -->
+    <div class="px-6 py-4 overflow-y-auto">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-foreground mb-1.5">目标适配器</label>
+          <select class="h-9 w-full px-3 text-xs bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
+            <option>ERP-S4 · 生产适配器</option>
+            <option>WMS · 仓储适配器</option>
+            <option>DQ Engine · 质量适配器</option>
+            <option>Adapter · 通用适配器</option>
+          </select>
+          <p class="text-[10px] text-muted-foreground mt-1.5">回放事件将被投递至所选适配器的输入队列。</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-foreground mb-1.5">回放模式</label>
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-card cursor-pointer hover:bg-muted">
+              <input type="radio" name="replay-mode" checked class="w-3.5 h-3.5 accent-primary" />
+              <span class="text-xs text-foreground">按原序</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-card cursor-pointer hover:bg-muted">
+              <input type="radio" name="replay-mode" class="w-3.5 h-3.5 accent-primary" />
+              <span class="text-xs text-foreground">并发</span>
+            </label>
+          </div>
+          <p class="text-[10px] text-muted-foreground mt-1.5">按原序保留事件时间戳顺序；并发可提升吞吐但可能改变因果顺序。</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-foreground mb-1.5">开始时间</label>
+          <input type="datetime-local" value="2026-09-10T10:40" class="h-9 w-full px-3 text-xs bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
+        </div>
+      </div>
+
+      <!-- Summary table -->
+      <div class="mt-5 border border-border rounded-xl overflow-hidden">
+        <div class="px-4 py-2.5 bg-muted border-b border-border text-xs font-medium text-foreground">事件摘要</div>
+        <table class="w-full border-collapse">
+          <tbody class="text-xs">
+            <tr class="border-b border-border">
+              <td class="px-4 py-2.5 text-muted-foreground w-[140px]">事件 ID</td>
+              <td class="px-4 py-2.5 font-mono text-foreground">EVT-20260910-001</td>
+            </tr>
+            <tr class="border-b border-border">
+              <td class="px-4 py-2.5 text-muted-foreground">事件类型</td>
+              <td class="px-4 py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] bg-state-warning-bg text-state-warning">purchase_delayed</span></td>
+            </tr>
+            <tr class="border-b border-border">
+              <td class="px-4 py-2.5 text-muted-foreground">业务对象</td>
+              <td class="px-4 py-2.5 font-mono text-foreground">ORD-202609-001</td>
+            </tr>
+            <tr class="border-b border-border">
+              <td class="px-4 py-2.5 text-muted-foreground">描述</td>
+              <td class="px-4 py-2.5 text-foreground">供应商 S-118 预计交期延迟 14 天</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2.5 text-muted-foreground">原始发生时间</td>
+              <td class="px-4 py-2.5 text-foreground">2026-09-10 10:41:00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex items-center justify-between px-6 py-4 border-t border-border">
+      <button class="h-9 px-4 border border-border bg-card text-foreground rounded-lg text-xs font-medium hover:bg-muted" data-dom-id="wizard-cancel">取消</button>
+      <div class="flex items-center gap-2">
+        <button class="h-9 px-4 border border-border bg-card text-foreground rounded-lg text-xs font-medium hover:bg-muted disabled:opacity-50" disabled data-dom-id="wizard-prev">上一步</button>
+        <button class="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 flex items-center gap-1.5" data-dom-id="wizard-next">
+          下一步
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

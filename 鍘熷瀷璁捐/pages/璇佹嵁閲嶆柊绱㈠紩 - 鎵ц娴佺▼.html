@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>证据重新索引 · AEOS EDP</title>
+    <style id="theme-vars">
+:root {
+  --edp-background: #f7f8fc;
+  --edp-foreground: #172033;
+  --edp-card: #ffffff;
+  --edp-card-foreground: #172033;
+  --edp-popover: #ffffff;
+  --edp-popover-foreground: #172033;
+  --edp-primary: #5b5ce2;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #ececff;
+  --edp-primary-100: #dcdcff;
+  --edp-primary-200: #c6c7ed;
+  --edp-muted: #f3f4f7;
+  --edp-muted-foreground: #788298;
+  --edp-border: #e8ebf2;
+  --edp-input: #e8ebf2;
+  --edp-ring: #5b5ce2;
+  --edp-radius-small: 4px;
+  --edp-radius-medium: 8px;
+  --edp-radius-large: 12px;
+  --edp-radius-full: 9999px;
+
+  --edp-state-success: #12a47d;
+  --edp-state-success-bg: #e9fbf4;
+  --edp-state-warning: #d97706;
+  --edp-state-warning-bg: #fff7e8;
+  --edp-state-error: #df4f5f;
+  --edp-state-error-bg: #fff0f2;
+  --edp-state-info: #3b82f6;
+  --edp-state-info-bg: #edf5ff;
+
+  --edp-surface-2: #fbfcff;
+  --edp-ink-2: #68738a;
+  --edp-ink-3: #969fb1;
+
+  --edp-shadow-1: 0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.03);
+  --edp-shadow-2: 0 8px 24px -8px rgba(15,23,42,.12);
+  --edp-shadow-3: 0 24px 60px -20px rgba(15,23,42,.18);
+}
+
+.dark {
+  --edp-background: #0b0c14;
+  --edp-foreground: #e8ebf2;
+  --edp-card: #131520;
+  --edp-card-foreground: #e8ebf2;
+  --edp-popover: #131520;
+  --edp-popover-foreground: #e8ebf2;
+  --edp-primary: #7b7cf0;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #1e1f3a;
+  --edp-primary-100: #2a2b4d;
+  --edp-primary-200: #3d3e6a;
+  --edp-muted: #1c1e2c;
+  --edp-muted-foreground: #9aa1af;
+  --edp-border: #2a2d3d;
+  --edp-input: #2a2d3d;
+  --edp-ring: #7b7cf0;
+  --edp-surface-2: #181a28;
+  --edp-ink-2: #9aa1af;
+  --edp-ink-3: #6b7280;
+}
+
+/* Typography */
+.edp-font-sans {
+  font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+.edp-font-mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Noto Sans SC Mono", monospace;
+}
+
+/* Surface */
+.edp-bg-page { background-color: var(--edp-background); }
+.edp-bg-card { background-color: var(--edp-card); }
+.edp-bg-muted { background-color: var(--edp-muted); }
+.edp-bg-primary { background-color: var(--edp-primary); }
+.edp-bg-primary-50 { background-color: var(--edp-primary-50); }
+
+/* Text */
+.edp-text-ink { color: var(--edp-foreground); }
+.edp-text-muted { color: var(--edp-muted-foreground); }
+.edp-text-primary { color: var(--edp-primary); }
+.edp-text-on-primary { color: var(--edp-primary-foreground); }
+
+/* Border */
+.edp-border { border: 1px solid var(--edp-border); }
+.edp-border-t { border-top: 1px solid var(--edp-border); }
+.edp-border-b { border-bottom: 1px solid var(--edp-border); }
+.edp-border-r { border-right: 1px solid var(--edp-border); }
+
+/* Radius */
+.edp-rounded-sm { border-radius: var(--edp-radius-small); }
+.edp-rounded-md { border-radius: var(--edp-radius-medium); }
+.edp-rounded-lg { border-radius: var(--edp-radius-large); }
+.edp-rounded-full { border-radius: var(--edp-radius-full); }
+
+/* Shadow */
+.edp-shadow-1 { box-shadow: var(--edp-shadow-1); }
+.edp-shadow-2 { box-shadow: var(--edp-shadow-2); }
+.edp-shadow-3 { box-shadow: var(--edp-shadow-3); }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--edp-background);
+    --color-foreground: var(--edp-foreground);
+    --color-card: var(--edp-card);
+    --color-card-foreground: var(--edp-card-foreground);
+    --color-popover: var(--edp-popover);
+    --color-popover-foreground: var(--edp-popover-foreground);
+    --color-primary: var(--edp-primary);
+    --color-primary-foreground: var(--edp-primary-foreground);
+    --color-muted: var(--edp-muted);
+    --color-muted-foreground: var(--edp-muted-foreground);
+    --color-border: var(--edp-border);
+    --color-input: var(--edp-input);
+    --color-ring: var(--edp-ring);
+    --radius-sm: var(--edp-radius-small);
+    --radius-md: var(--edp-radius-medium);
+    --radius-lg: var(--edp-radius-large);
+  }
+  @layer base {
+    body { background: var(--edp-background); color: var(--edp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--edp-background); }
+      .text-background { color: var(--edp-background); }
+      .border-background { border-color: var(--edp-background); }
+      .ring-background { --tw-ring-color: var(--edp-background); }
+      .bg-foreground { background-color: var(--edp-foreground); }
+      .text-foreground { color: var(--edp-foreground); }
+      .border-foreground { border-color: var(--edp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--edp-foreground); }
+      .bg-card { background-color: var(--edp-card); }
+      .text-card { color: var(--edp-card); }
+      .border-card { border-color: var(--edp-card); }
+      .ring-card { --tw-ring-color: var(--edp-card); }
+      .bg-card-foreground { background-color: var(--edp-card-foreground); }
+      .text-card-foreground { color: var(--edp-card-foreground); }
+      .border-card-foreground { border-color: var(--edp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--edp-card-foreground); }
+      .bg-popover { background-color: var(--edp-popover); }
+      .text-popover { color: var(--edp-popover); }
+      .border-popover { border-color: var(--edp-popover); }
+      .ring-popover { --tw-ring-color: var(--edp-popover); }
+      .bg-popover-foreground { background-color: var(--edp-popover-foreground); }
+      .text-popover-foreground { color: var(--edp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--edp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--edp-popover-foreground); }
+      .bg-primary { background-color: var(--edp-primary); }
+      .text-primary { color: var(--edp-primary); }
+      .border-primary { border-color: var(--edp-primary); }
+      .ring-primary { --tw-ring-color: var(--edp-primary); }
+      .bg-primary-foreground { background-color: var(--edp-primary-foreground); }
+      .text-primary-foreground { color: var(--edp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--edp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--edp-primary-foreground); }
+      .bg-muted { background-color: var(--edp-muted); }
+      .text-muted { color: var(--edp-muted); }
+      .border-muted { border-color: var(--edp-muted); }
+      .ring-muted { --tw-ring-color: var(--edp-muted); }
+      .bg-muted-foreground { background-color: var(--edp-muted-foreground); }
+      .text-muted-foreground { color: var(--edp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--edp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--edp-muted-foreground); }
+      .bg-border { background-color: var(--edp-border); }
+      .text-border { color: var(--edp-border); }
+      .border-border { border-color: var(--edp-border); }
+      .ring-border { --tw-ring-color: var(--edp-border); }
+      .bg-input { background-color: var(--edp-input); }
+      .text-input { color: var(--edp-input); }
+      .border-input { border-color: var(--edp-input); }
+      .ring-input { --tw-ring-color: var(--edp-input); }
+      .bg-ring { background-color: var(--edp-ring); }
+      .text-ring { color: var(--edp-ring); }
+      .border-ring { border-color: var(--edp-ring); }
+      .ring-ring { --tw-ring-color: var(--edp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+    <style id="critical-layout">
+      .page-shell { display: flex; min-height: 100vh; }
+      .sidebar { width: 250px; flex: 0 0 250px; }
+      .topbar { height: 66px; }
+      .main-stage { flex: 1 1 auto; margin-left: 250px; padding-top: 66px; }
+      .page-content { padding: 24px; max-width: 1440px; }
+      .kpi-band { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+      .evidence-layout { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; }
+      .bg-primary-50 { background-color: var(--edp-primary-50); }
+      .bg-state-success { background-color: var(--edp-state-success); }
+      .text-state-success { color: var(--edp-state-success); }
+      .bg-state-success-bg { background-color: var(--edp-state-success-bg); }
+      .bg-state-warning { background-color: var(--edp-state-warning); }
+      .text-state-warning { color: var(--edp-state-warning); }
+      .bg-state-warning-bg { background-color: var(--edp-state-warning-bg); }
+      .bg-state-error { background-color: var(--edp-state-error); }
+      .text-state-error { color: var(--edp-state-error); }
+      .bg-state-error-bg { background-color: var(--edp-state-error-bg); }
+      .bg-state-info { background-color: var(--edp-state-info); }
+      .text-state-info { color: var(--edp-state-info); }
+      .bg-state-info-bg { background-color: var(--edp-state-info-bg); }
+      .chain-node { position: relative; }
+      .chain-node::after {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 32px;
+        bottom: -16px;
+        width: 2px;
+        background-color: var(--edp-border);
+      }
+      .chain-node:last-child::after { display: none; }
+      @media (max-width: 1200px) {
+        .kpi-band { grid-template-columns: repeat(2, 1fr); }
+        .evidence-layout { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 768px) {
+        .kpi-band { grid-template-columns: 1fr; }
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+<aside class="fixed left-0 top-0 bottom-0 w-[250px] bg-card border-r border-border z-20 flex flex-col sidebar">
+  <div class="h-[70px] flex items-center px-4 border-b border-border">
+    <div class="w-9 h-9 rounded-lg bg-primary text-primary-foreground grid place-items-center font-extrabold text-lg shadow-sm">E</div>
+    <div class="ml-2.5">
+      <b class="text-sm">AEOS EDP</b>
+      <span class="block text-[10px] text-muted-foreground">Evidence Data Platform</span>
+    </div>
+  </div>
+  <div class="p-3.5">
+    <button class="w-full border border-border bg-card rounded-xl p-2.5 flex items-center gap-2 hover:bg-muted transition-colors" data-dom-id="tenant-switch">
+      <div class="w-7 h-7 rounded-lg bg-primary-50 text-primary grid place-items-center text-xs font-extrabold">AC</div>
+      <div class="min-w-0 flex-1 text-left">
+        <b class="text-xs block truncate">ACME · 华东事业群</b>
+        <span class="text-[10px] text-muted-foreground block truncate">Enterprise · 生产环境</span>
+      </div>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-muted-foreground"></i>
+    </button>
+  </div>
+  <nav class="flex-1 px-2.5 py-2 overflow-y-auto">
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-overview" data-nav="overview">
+      <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i>
+      <span>运营总览</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">数据工作台</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-objects" data-nav="objects">
+      <i data-lucide="layers" class="w-[18px] h-[18px]"></i>
+      <span>业务对象</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-events" data-nav="events">
+      <i data-lucide="zap" class="w-[18px] h-[18px]"></i>
+      <span>事件流</span>
+    </button>
+    <button class="nav-item active w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-evidence" data-nav="evidence" data-active="true">
+      <i data-lucide="shield-check" class="w-[18px] h-[18px]"></i>
+      <span>证据库</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">运维监控</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-quality" data-nav="quality">
+      <i data-lucide="triangle-alert" class="w-[18px] h-[18px]"></i>
+      <span>数据质量</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-governance" data-nav="governance">
+      <i data-lucide="scroll-text" class="w-[18px] h-[18px]"></i>
+      <span>审计日志</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-systems" data-nav="systems">
+      <i data-lucide="plug" class="w-[18px] h-[18px]"></i>
+      <span>适配器管理</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">平台配置</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-tenants" data-nav="tenants">
+      <i data-lucide="building-2" class="w-[18px] h-[18px]"></i>
+      <span>租户管理</span>
+    </button>
+  </nav>
+  <div class="p-3.5 border-t border-border">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-full bg-primary-50 text-primary grid place-items-center text-[11px] font-extrabold">YL</div>
+      <div class="flex-1 min-w-0">
+        <b class="text-xs block truncate">Y. Liu</b>
+        <span class="text-[10px] text-muted-foreground block truncate">Workspace Admin</span>
+      </div>
+      <button class="w-8 h-8 rounded-lg border border-border bg-card grid place-items-center text-muted-foreground hover:bg-muted" data-dom-id="settings-btn">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<header class="fixed top-0 left-[250px] right-0 h-[66px] bg-card/92 backdrop-blur border-b border-border z-10 flex items-center justify-between px-6 topbar">
+  <div class="flex items-center gap-4">
+    <div class="text-xs text-muted-foreground">EDP / <b class="text-foreground font-semibold" data-slot="crumb">证据库</b></div>
+    <div class="relative hidden md:block">
+      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"></i>
+      <input type="text" placeholder="搜索对象、事件、证据…" class="h-9 w-[330px] pl-9 pr-3 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent" data-dom-id="global-search" />
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <button class="h-9 px-2.5 border border-border bg-card rounded-lg text-muted-foreground hover:bg-muted flex items-center gap-1.5" data-dom-id="notifications-btn">
+      <i data-lucide="bell" class="w-4 h-4"></i>
+      <span class="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">3</span>
+    </button>
+    <button class="h-9 px-3 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-1.5" data-dom-id="command-palette">
+      <i data-lucide="command" class="w-4 h-4"></i>
+      <span>K</span>
+    </button>
+    <button class="h-9 px-2.5 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-2">
+      <div class="w-6 h-6 rounded-full bg-primary-50 text-primary grid place-items-center text-[9px] font-extrabold">YL</div>
+      <span>Y. Liu</span>
+      <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+    </button>
+  </div>
+</header>
+
+<main class="main-stage bg-background">
+  <div class="page-content">
+    <!-- Page head -->
+    <section class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+      <div>
+        <h1 class="text-xl font-semibold text-foreground">证据库</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="h-9 px-3 border border-border bg-card text-foreground rounded-lg text-xs font-medium hover:bg-muted flex items-center gap-1.5">
+          <i data-lucide="shield-check" class="w-4 h-4"></i>
+          完整性抽检
+        </button>
+        <button class="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 flex items-center gap-1.5" data-dom-id="evidence-reindex">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          重建索引
+        </button>
+      </div>
+    </section>
+
+    <!-- KPI band -->
+    <section class="kpi-band mb-4">
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">证据数量</div>
+          <div class="text-xl font-semibold text-foreground">52.6K</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">+847 今日</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">对象覆盖率</div>
+          <div class="text-xl font-semibold text-foreground">100%</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">1,247 / 1,247</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="layers" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">校验和有效</div>
+          <div class="text-xl font-semibold text-foreground">99.99%</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">仅 3 条异常</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-state-success-bg text-state-success grid place-items-center"><i data-lucide="check-circle" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">原文访问</div>
+          <div class="text-xl font-semibold text-foreground">18</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">过去 24 小时</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="file-text" class="w-4 h-4"></i></div>
+      </div>
+    </section>
+
+    <!-- Two-column: evidence list + chain diagram -->
+    <section class="evidence-layout">
+      <!-- Evidence list -->
+      <div class="bg-card border border-border rounded-xl p-4">
+        <div class="flex items-center justify-end mb-3">
+          <div class="relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground"></i>
+            <input type="text" placeholder="搜索证据…" class="h-8 w-[220px] pl-8 pr-3 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent" data-dom-id="evidence-search" />
+          </div>
+        </div>
+        <div class="space-y-3">
+          <!-- ev-73c2 -->
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 text-primary">Primary</span>
+                <span class="text-xs font-semibold text-foreground">ERP 订单快照</span>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">VALID</span>
+            </div>
+            <div class="text-[11px] text-muted-foreground mb-2">ev-73c2 · ERP-S4 / sales_order / SO-202609001</div>
+            <div class="text-xs text-foreground mb-2">订单、客户、交期、行项目的当时快照；Revision 18。</div>
+            <div class="flex items-center justify-between text-[10px] text-muted-foreground">
+              <div class="flex items-center gap-3">
+                <span>09-10 10:40</span>
+                <span class="font-mono">a4c1…9f3d</span>
+              </div>
+              <span>Sales IT</span>
+            </div>
+          </div>
+
+          <!-- ev-61b8 -->
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 text-primary">Primary</span>
+                <span class="text-xs font-semibold text-foreground">库存快照</span>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">VALID</span>
+            </div>
+            <div class="text-[11px] text-muted-foreground mb-2">ev-61b8 · WMS / stock / MAT-X</div>
+            <div class="text-xs text-foreground mb-2">物料 X 可用量为 0，记录缺口 1000。</div>
+            <div class="flex items-center justify-between text-[10px] text-muted-foreground">
+              <div class="flex items-center gap-3">
+                <span>09-10 10:40</span>
+                <span class="font-mono">6ab9…11c0</span>
+              </div>
+              <span>Supply IT</span>
+            </div>
+          </div>
+
+          <!-- ev-5d21 -->
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 text-primary">Primary</span>
+                <span class="text-xs font-semibold text-foreground">采购 PO 快照</span>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">VALID</span>
+            </div>
+            <div class="text-[11px] text-muted-foreground mb-2">ev-5d21 · ERP-S4 / po / PO-38117</div>
+            <div class="text-xs text-foreground mb-2">供应商 S-118 计划到货日期后移 14 天。</div>
+            <div class="flex items-center justify-between text-[10px] text-muted-foreground">
+              <div class="flex items-center gap-3">
+                <span>09-10 10:41</span>
+                <span class="font-mono">e19d…ab62</span>
+              </div>
+              <span>Procurement</span>
+            </div>
+          </div>
+
+          <!-- ev-2b90 -->
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-state-info-bg text-state-info">Derived</span>
+                <span class="text-xs font-semibold text-foreground">风险计算证据</span>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-state-success-bg text-state-success">VALID</span>
+            </div>
+            <div class="text-[11px] text-muted-foreground mb-2">ev-2b90 · Delivery.OrderRisk v0.3</div>
+            <div class="text-xs text-foreground mb-2">由订单、库存、采购三份 Primary Evidence 聚合计算。</div>
+            <div class="flex items-center justify-between text-[10px] text-muted-foreground">
+              <div class="flex items-center gap-3">
+                <span>09-10 10:42</span>
+                <span class="font-mono">1fd0…7ac8</span>
+              </div>
+              <span>DQ Engine</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evidence chain diagram -->
+      <div class="bg-card border border-border rounded-xl p-4">
+        <div class="flex items-center justify-end mb-4">
+          <span class="text-[10px] text-muted-foreground">对象 ORD-202609-001</span>
+        </div>
+        <div class="space-y-4">
+          <div class="chain-node flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-primary-50 text-primary grid place-items-center shrink-0 relative z-10">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium text-foreground">ERP 订单快照</div>
+              <div class="text-[10px] text-muted-foreground">ev-73c2 · Primary</div>
+              <div class="text-[10px] text-muted-foreground mt-0.5">SO-202609001 · 09-10 10:40</div>
+            </div>
+          </div>
+          <div class="chain-node flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-primary-50 text-primary grid place-items-center shrink-0 relative z-10">
+              <i data-lucide="package" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium text-foreground">库存快照</div>
+              <div class="text-[10px] text-muted-foreground">ev-61b8 · Primary</div>
+              <div class="text-[10px] text-muted-foreground mt-0.5">MAT-X · 09-10 10:40</div>
+            </div>
+          </div>
+          <div class="chain-node flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-primary-50 text-primary grid place-items-center shrink-0 relative z-10">
+              <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium text-foreground">采购 PO 快照</div>
+              <div class="text-[10px] text-muted-foreground">ev-5d21 · Primary</div>
+              <div class="text-[10px] text-muted-foreground mt-0.5">PO-38117 · 09-10 10:41</div>
+            </div>
+          </div>
+          <div class="chain-node flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-state-info-bg text-state-info grid place-items-center shrink-0 relative z-10">
+              <i data-lucide="zap" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium text-foreground">风险计算证据</div>
+              <div class="text-[10px] text-muted-foreground">ev-2b90 · Derived</div>
+              <div class="text-[10px] text-muted-foreground mt-0.5">Delivery.OrderRisk v0.3 · 09-10 10:42</div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-border">
+          <div class="text-[10px] text-muted-foreground mb-2">链上校验</div>
+          <div class="flex items-center gap-2 text-xs text-state-success">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span>4 份证据校验和均有效，依赖关系完整</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- Evidence reindex wizard -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm" data-dom-id="wizard-overlay">
+  <div class="bg-card border border-border rounded-xl shadow-3 w-full max-w-[760px] max-h-[calc(100vh-48px)] overflow-hidden flex flex-col">
+    <!-- Wizard header -->
+    <div class="flex items-start justify-between px-6 py-4 border-b border-border">
+      <div>
+        <h2 class="text-lg font-semibold text-foreground">证据重新索引</h2>
+        <p class="text-xs text-muted-foreground mt-0.5">重新构建指定业务对象与时间段内的证据索引</p>
+      </div>
+      <button class="w-8 h-8 rounded-lg border border-border bg-card grid place-items-center text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring" data-dom-id="wizard-close" aria-label="关闭">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Stepper -->
+    <div class="px-6 py-4 border-b border-border">
+      <div class="flex items-center">
+        <!-- Step 1 -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-medium">1</div>
+          <div class="hidden sm:block">
+            <div class="text-xs font-medium text-foreground">选择范围</div>
+            <div class="text-[10px] text-muted-foreground">业务对象与时间</div>
+          </div>
+        </div>
+        <div class="flex-1 h-px bg-primary mx-3"></div>
+        <!-- Step 2 -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-medium">2</div>
+          <div class="hidden sm:block">
+            <div class="text-xs font-medium text-foreground">校验规则</div>
+            <div class="text-[10px] text-muted-foreground">完整性与血缘</div>
+          </div>
+        </div>
+        <div class="flex-1 h-px bg-border mx-3"></div>
+        <!-- Step 3 -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-full bg-muted text-muted-foreground grid place-items-center text-xs font-medium">3</div>
+          <div class="hidden sm:block">
+            <div class="text-xs font-medium text-foreground">执行确认</div>
+            <div class="text-[10px] text-muted-foreground">预估与启动</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard body -->
+    <div class="p-6 overflow-y-auto flex-1">
+      <!-- Step 1 summary -->
+      <div class="mb-5">
+        <h3 class="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          <i data-lucide="check-circle-2" class="w-4 h-4 text-state-success"></i>
+          1. 选择范围
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <label class="flex items-start gap-2.5 p-3 border border-border rounded-lg bg-card hover:bg-muted cursor-pointer">
+            <input type="checkbox" checked class="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-ring">
+            <div>
+              <div class="text-xs font-medium text-foreground">ERP 订单</div>
+              <div class="text-[10px] text-muted-foreground">sales_order · 23.1K 证据</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-2.5 p-3 border border-border rounded-lg bg-card hover:bg-muted cursor-pointer">
+            <input type="checkbox" checked class="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-ring">
+            <div>
+              <div class="text-xs font-medium text-foreground">库存记录</div>
+              <div class="text-[10px] text-muted-foreground">stock · 18.4K 证据</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-2.5 p-3 border border-border rounded-lg bg-card hover:bg-muted cursor-pointer">
+            <input type="checkbox" class="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-ring">
+            <div>
+              <div class="text-xs font-medium text-foreground">采购订单</div>
+              <div class="text-[10px] text-muted-foreground">po · 9.7K 证据</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-2.5 p-3 border border-border rounded-lg bg-card hover:bg-muted cursor-pointer">
+            <input type="checkbox" class="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-ring">
+            <div>
+              <div class="text-xs font-medium text-foreground">派生风险指标</div>
+              <div class="text-[10px] text-muted-foreground">derived · 1.4K 证据</div>
+            </div>
+          </label>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-muted-foreground block mb-1.5">开始日期</label>
+            <input type="date" value="2026-08-01" class="h-9 w-full px-3 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent">
+          </div>
+          <div>
+            <label class="text-xs text-muted-foreground block mb-1.5">结束日期</label>
+            <input type="date" value="2026-09-11" class="h-9 w-full px-3 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent">
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 active content -->
+      <div>
+        <h3 class="text-sm font-semibold text-foreground mb-3">2. 校验规则</h3>
+        <div class="space-y-3">
+          <label class="flex items-start gap-3 p-3.5 border border-primary bg-primary-50/50 rounded-lg cursor-pointer">
+            <input type="radio" name="wizard-rule" checked class="mt-0.5 w-4 h-4 border-border text-primary focus:ring-ring">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-primary"></i>
+                <span class="text-xs font-semibold text-foreground">完整性校验</span>
+              </div>
+              <div class="text-[11px] text-muted-foreground mt-1">校验每份证据的哈希、快照一致性与存储可达性，确保索引条目可回溯原文。</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-3 p-3.5 border border-border bg-card rounded-lg hover:bg-muted cursor-pointer">
+            <input type="radio" name="wizard-rule" class="mt-0.5 w-4 h-4 border-border text-primary focus:ring-ring">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <i data-lucide="git-branch" class="w-4 h-4 text-state-info"></i>
+                <span class="text-xs font-semibold text-foreground">血缘校验</span>
+              </div>
+              <div class="text-[11px] text-muted-foreground mt-1">重建派生证据与 Primary Evidence 之间的依赖边，验证血缘链路完整。</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-3 p-3.5 border border-border bg-card rounded-lg hover:bg-muted cursor-pointer">
+            <input type="radio" name="wizard-rule" class="mt-0.5 w-4 h-4 border-border text-primary focus:ring-ring">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-state-warning"></i>
+                <span class="text-xs font-semibold text-foreground">完整性与血缘</span>
+              </div>
+              <div class="text-[11px] text-muted-foreground mt-1">同时进行完整性校验与血缘校验；耗时较长，建议用于月度运维或审计前。</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Step 3 preview -->
+      <div class="mt-5 pt-5 border-t border-border">
+        <h3 class="text-sm font-semibold text-foreground mb-3">3. 执行确认</h3>
+        <div class="bg-muted/50 border border-border rounded-lg p-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-primary-50 text-primary grid place-items-center">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-foreground">预计重新索引证据</div>
+              <div class="text-[10px] text-muted-foreground">基于已选范围与校验规则估算</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-xl font-semibold text-foreground">41.5K</div>
+            <div class="text-[10px] text-muted-foreground">约 6 分钟</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard footer -->
+    <div class="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
+      <button class="h-9 px-4 border border-border bg-card text-foreground rounded-lg text-xs font-medium hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring" data-dom-id="wizard-cancel">取消</button>
+      <div class="flex items-center gap-2">
+        <button class="h-9 px-4 border border-border bg-card text-foreground rounded-lg text-xs font-medium hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring" data-dom-id="wizard-prev">上一步</button>
+        <button class="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring" data-dom-id="wizard-next">下一步</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

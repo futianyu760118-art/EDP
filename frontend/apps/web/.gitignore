@@ -1,0 +1,5 @@
+# Playwright E2E 产物（W6 T10）
+playwright-report/
+test-results/
+
+# 注意：e2e/__screenshots__/ 为 T11 visual 基线，必须提交——勿加入忽略

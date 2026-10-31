@@ -1,0 +1,14 @@
+# 部署侧限流样例（EDP-025「网关 + 应用双层」的网关全局层）。
+#
+# 说明：
+# - 租户维度限流需鉴权后信息（租户身份在 JWT claims / API Key 绑定关系中），
+#   nginx 无法按租户分键——租户维度归应用层（backend
+#   apps/api/edp_api/modules/tenantmgmt/ratelimit.py 的进程内令牌桶）；
+# - 本文件为部署侧样例，未随 docker compose 挂载（按环境自行启用）。
+
+# 放在 http {} 级：全局共享内存限流区（每 IP 10 req/s，突发桶 20）
+# limit_req_zone $binary_remote_addr zone=edp_global:10m rate=10r/s;
+
+# 放在 server {} / location {} 级：应用全局兜底（nodelay = 突发即拒绝）
+# limit_req zone=edp_global burst=20 nodelay;
+# limit_req_status 429;

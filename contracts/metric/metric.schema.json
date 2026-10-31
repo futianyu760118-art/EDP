@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/metric/metric.schema.json",
+  "title": "Metric 指标语义契约",
+  "description": "AEOS 统一指标注册中心（V1.1 第十一节 + V1.2 第五节边界）。定义 Owner=业务域/M01，EDP 只做注册、版本与记录，不裁决口径；EBMS 前端零公式，指标均引用 metric_id。",
+  "type": "object",
+  "required": ["metric_id", "code", "name", "owner", "version", "effective_from"],
+  "properties": {
+    "metric_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "description": "指标编码（如 otd_rate）"
+    },
+    "name": { "type": "string", "description": "指标名称" },
+    "business_definition": { "type": ["string", "null"], "description": "业务口径定义（如：按承诺日期计算的准时交付订单比例）" },
+    "formula": { "type": ["string", "null"], "description": "公式快照（禁止前端临时写公式）" },
+    "source": { "type": ["string", "null"], "description": "数据来源" },
+    "owner": { "type": "string", "description": "指标 Owner（业务域）" },
+    "definition_owner": { "type": ["string", "null"], "description": "口径定义 Owner（业务域；V1.2 第五节）" },
+    "definition_source": { "type": ["string", "null"], "enum": ["M01_KERNEL", "DOMAIN"], "description": "定义来源（M01 下发 / 域 Owner）" },
+    "target_owner": { "type": ["string", "null"], "description": "目标值 Owner（M01；V1.2 第五节）" },
+    "snapshot_policy": { "type": ["string", "null"], "description": "定义变更快照策略（默认必须）" },
+    "period_rule": { "type": ["string", "null"], "description": "周期规则（如 AEOS Operating Window）" },
+    "dimension": { "type": "array", "items": { "type": "string" }, "description": "分析维度" },
+    "unit": { "type": ["string", "null"] },
+    "version": { "type": "integer", "minimum": 1 },
+    "effective_from": { "type": "string", "format": "date-time" },
+    "effective_to": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": true
+}

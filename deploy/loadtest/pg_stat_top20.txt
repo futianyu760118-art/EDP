@@ -1,0 +1,24 @@
+ total_ms | mean_ms | calls | hit_pct |                                                                              query                                                                               
+----------+---------+-------+---------+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     76.6 |   76.64 |     1 |   100.0 | UPDATE event.events SET ingest_latency_ms = $1 + (abs(hashtext(event_id::text)) % $2) WHERE tenant_id = $3 AND (event_id IN ($5, $6, $7, $8, $9, $10, $11, $12, 
+   2463.4 |   55.99 |    44 |   100.0 | INSERT INTO event.events (event_id, tenant_id, event_type, object_id, source_system, occurred_at, actor_type, actor_id, result_type, risk_level, score, data, in
+     33.7 |   33.73 |     1 |    96.1 | CREATE EXTENSION IF NOT EXISTS pg_stat_statements
+     27.6 |   27.61 |     1 |   100.0 | INSERT INTO event.events (event_id, tenant_id, event_type, object_id, source_system, occurred_at, actor_type, actor_id, result_type, risk_level, score, data, in
+     13.9 |   13.91 |     1 |   100.0 | SELECT round(total_exec_time::numeric,$1) AS total_ms, round(mean_exec_time::numeric,$2) AS mean_ms, calls, round((shared_blks_hit::numeric/nullif(shared_blks_h
+  10119.9 |   13.11 |   772 |   100.0 | SELECT (SELECT count(*) FROM event.events e WHERE NOT EXISTS (SELECT $1 FROM master.business_objects bo WHERE bo.object_id = e.object_id)) AS event_orphans, (SE
+  19235.2 |   12.14 |  1585 |   100.0 | SELECT t.object_type, count(*) AS registered, count(*) FILTER (WHERE t.connected) AS connected FROM ( SELECT bo.object_type, (EXISTS (SELECT $1 FROM event.event
+  37239.0 |   10.03 |  3713 |   100.0 | SELECT coalesce(max(anon_1.cnt), $1::INTEGER) AS coalesce_1 FROM (SELECT count(*) AS cnt FROM event.events WHERE event.events.tenant_id = $2::UUID AND event.eve
+ 359678.5 |    9.65 | 37267 |   100.0 | INSERT INTO platform.tenant_usage_daily (id, tenant_id, usage_date, api_calls, events_in, events_duplicated, storage_gb, throttled_429) VALUES ($1::UUID, $2::UU
+    337.5 |    8.65 |    39 |   100.0 | INSERT INTO evidence.records (evidence_id, tenant_id, source_system, source_record_id, object_id, event_id, checksum, snapshot, captured_at, created_by, updated
+     42.1 |    8.42 |     5 |   100.0 | INSERT INTO evidence.records (evidence_id, tenant_id, source_system, source_record_id, object_id, event_id, checksum, snapshot, captured_at, created_by, updated
+  31180.6 |    8.40 |  3713 |   100.0 | SELECT percentile_cont($1::FLOAT) WITHIN GROUP (ORDER BY event.events.ingest_latency_ms ASC) AS anon_1 FROM event.events WHERE event.events.tenant_id = $2::UUID
+      8.3 |    8.32 |     1 |   100.0 | SELECT $1, count(*) FROM master.business_objects UNION ALL SELECT $2, count(*) FROM event.events UNION ALL SELECT $3, count(*) FROM evidence.records UNION ALL S
+      8.2 |    8.20 |     1 |    88.4 | SELECT platform.ensure_audit_partitions()
+  34417.8 |    6.37 |  5407 |   100.0 | SELECT event.events.event_id, event.events.tenant_id, event.events.event_type, event.events.object_id, event.events.source_system, event.events.occurred_at, eve
+  32822.9 |    6.16 |  5330 |   100.0 | SELECT event.events.event_id, event.events.tenant_id, event.events.event_type, event.events.object_id, event.events.source_system, event.events.occurred_at, eve
+   4207.9 |    5.45 |   772 |   100.0 | SELECT r.evidence_id, r.object_id, r.checksum, r.snapshot, r.captured_at FROM evidence.records r WHERE r.event_id IN (SELECT e.event_id FROM event.events e WHER
+  19091.6 |    5.14 |  3713 |   100.0 | SELECT count(*) AS count_1 FROM event.events WHERE event.events.tenant_id = $1::UUID AND event.events.created_at >= $2::TIMESTAMP WITH TIME ZONE
+      4.2 |    4.21 |     1 |   100.0 | INSERT INTO evidence.records (evidence_id, tenant_id, source_system, source_record_id, object_id, event_id, checksum, snapshot, captured_at, created_by, updated
+  11980.1 |    3.23 |  3713 |   100.0 | SELECT count(*) AS count_1 FROM platform.audit_logs WHERE platform.audit_logs.tenant_id = $1::UUID AND platform.audit_logs.occurred_at >= $2::TIMESTAMP WITH TIM
+(20 rows)
+

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/governance/admission-state.schema.json",
+  "title": "Data Admission 数据准入状态机契约（A1–A4）",
+  "description": "AEOS 企业数据准入与归档状态机（V1.1 第三十八～四十四节，V1.2 更名 A1–A4）。任何状态变化必须产生 Event 与 Audit；只有 MANAGEMENT_APPROVED 才允许转 OFFICIAL。",
+  "type": "object",
+  "required": ["admission_id", "object_id", "state", "updated_at"],
+  "properties": {
+    "admission_id": { "type": "string", "format": "uuid" },
+    "object_id": { "type": "string", "format": "uuid" },
+    "state": {
+      "type": "string",
+      "enum": [
+        "RECEIVED",
+        "PROFILED",
+        "CLEANED",
+        "STANDARDIZED",
+        "CLASSIFIED",
+        "SOURCE_REVIEW",
+        "SOURCE_APPROVED",
+        "MANAGEMENT_REVIEW",
+        "MANAGEMENT_APPROVED",
+        "OFFICIAL",
+        "ARCHIVED",
+        "RETURNED",
+        "REJECTED",
+        "SUSPENDED",
+        "ESCALATED"
+      ]
+    },
+    "review_result": {
+      "type": ["string", "null"],
+      "enum": [
+        "APPROVED",
+        "APPROVED_WITH_WARNING",
+        "RETURN_FOR_CORRECTION",
+        "REJECTED",
+        "SUSPENDED",
+        "ESCALATED"
+      ],
+      "description": "两级审核统一六种结果（A2/A3 阶段填充）"
+    },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "transitions": {
+      "type": "object",
+      "description": "主链：RECEIVED → PROFILED → CLEANED → STANDARDIZED → CLASSIFIED → SOURCE_REVIEW → SOURCE_APPROVED → MANAGEMENT_REVIEW → MANAGEMENT_APPROVED → OFFICIAL → ARCHIVED；异常态：RETURNED / REJECTED / SUSPENDED / ESCALATED",
+      "properties": {
+        "RECEIVED": { "type": "array", "items": { "enum": ["PROFILED", "REJECTED"] } },
+        "PROFILED": { "type": "array", "items": { "enum": ["CLEANED", "RETURNED", "SUSPENDED"] } },
+        "CLEANED": { "type": "array", "items": { "enum": ["STANDARDIZED", "RETURNED"] } },
+        "STANDARDIZED": { "type": "array", "items": { "enum": ["CLASSIFIED", "RETURNED"] } },
+        "CLASSIFIED": { "type": "array", "items": { "enum": ["SOURCE_REVIEW", "RETURNED"] } },
+        "SOURCE_REVIEW": { "type": "array", "items": { "enum": ["SOURCE_APPROVED", "REJECTED", "RETURNED", "SUSPENDED", "ESCALATED"] } },
+        "SOURCE_APPROVED": { "type": "array", "items": { "enum": ["MANAGEMENT_REVIEW", "SUSPENDED"] } },
+        "MANAGEMENT_REVIEW": { "type": "array", "items": { "enum": ["MANAGEMENT_APPROVED", "REJECTED", "RETURNED", "SUSPENDED", "ESCALATED"] } },
+        "MANAGEMENT_APPROVED": { "type": "array", "items": { "enum": ["OFFICIAL", "SUSPENDED"] } },
+        "OFFICIAL": { "type": "array", "items": { "enum": ["ARCHIVED", "RETURNED"] } },
+        "ARCHIVED": { "type": "array", "items": { "enum": [] } }
+      }
+    }
+  }
+}

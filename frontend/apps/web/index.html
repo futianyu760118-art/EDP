@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN" class="light" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AEOS EDP</title>
+    <script>
+      // 防 FOUC：在任何样式/脚本加载前按 persisted → prefers-color-scheme 解析主题。
+      // 注意 zustand persist 的值格式为 {"state":{"theme":"dark"},"version":0}。
+      (function () {
+        var theme = "light";
+        try {
+          var raw = localStorage.getItem("edp-theme");
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            var stored = parsed && parsed.state && parsed.state.theme;
+            if (stored === "dark" || stored === "light") theme = stored;
+          } else if (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+          ) {
+            theme = "dark";
+          }
+        } catch (e) {}
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.classList.toggle("light", theme === "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen font-sans antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "@edp/api-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "gen": "node scripts/gen.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "msw": "^2.6.0",
+    "openapi-typescript": "^7.0.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/evidence/evidence.schema.json",
+  "title": "Evidence 证据语义契约",
+  "description": "AEOS 证据契约（V1.1 第八节）。证据链：Result → Evidence → Source Snapshot → Source Record → Source System；Decision 与 Action 同样必须挂 Evidence。",
+  "type": "object",
+  "required": [
+    "evidence_id",
+    "tenant_id",
+    "source_system",
+    "source_record_id",
+    "snapshot",
+    "checksum",
+    "checksum_algo",
+    "captured_at"
+  ],
+  "properties": {
+    "evidence_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "source_system": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "source_record_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "object_ref": { "type": ["object", "string"], "description": "关联业务对象引用" },
+    "snapshot": { "type": "object", "description": "源记录快照（不可变）" },
+    "checksum": { "type": "string", "description": "canonical 快照 sha256（单一实现，防漂移）" },
+    "checksum_algo": { "type": "string", "default": "sha256" },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref_type", "ref_id"],
+        "properties": {
+          "ref_type": {
+            "type": "string",
+            "enum": ["CASE", "DECISION", "ACTION", "RESULT", "EVENT", "TRACE"]
+          },
+          "ref_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "description": "证据链关联（逆向穿透 Result/Decision/Action）"
+    },
+    "source_version": { "type": ["string", "null"], "description": "源系统数据版本（V1.1 第八节新增）" },
+    "source_timestamp": { "type": ["string", "null"], "format": "date-time", "description": "源记录时间戳" },
+    "captured_at": { "type": "string", "format": "date-time", "description": "证据采集时间" },
+    "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "retention_policy": { "type": ["string", "null"], "description": "保留策略" }
+  },
+  "additionalProperties": true
+}

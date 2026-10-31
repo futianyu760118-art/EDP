@@ -1,0 +1,54 @@
+# EDP staging Patroni 节点 1（T14 / EDP-021）——挂载为 /etc/patroni.yml（只读）。
+# 账号不在 patroni users 段创建：edp_migrator/edp_app 走 deploy/pg-init + deploy-staging.ps1。
+# replicator（复制账号）由 Patroni bootstrap 自动创建（实测 patroni 4.1.5 行为）。
+scope: edp_staging
+namespace: /staging/
+name: staging-pg1
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: patroni1:8008
+etcd3:
+  hosts: ["etcd:2379"]
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 5
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        max_connections: 100
+        max_wal_senders: 10
+        hot_standby: "on"
+  initdb:
+  - encoding: UTF8
+  - data-checksums
+  # pg_hba：应用（md5 密码）+ 节点间复制条目；staging 最小版网段放开 0.0.0.0/0（凭密码）
+  pg_hba:
+  - host replication replicator 0.0.0.0/0 md5
+  - host all all 0.0.0.0/0 md5
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: patroni1:5432
+  data_dir: /var/lib/postgresql/data/pgdata
+  bin_dir: /usr/lib/postgresql/16/bin
+  parameters:
+    password_encryption: md5
+    # pgbackrest WAL 归档（本地 repo 卷；实测 2026-09-18 全量备份依赖 archive_mode）
+    archive_mode: "on"
+    archive_command: 'pgbackrest --stanza=edp archive-push %p'
+    # pg_stat_statements 供给（W6 T3 / EDP-033 压测线）：preload 两节点一致；
+    # 扩展本体需 bootstrap 后在**主节点**手动建立（patroni initdb 不执行
+    # deploy/pg-init 目录），一次即可随流复制到从库：
+    #   psql -h patroni1 -U postgres -d edp \
+    #     -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements;'
+    shared_preload_libraries: pg_stat_statements
+    pg_stat_statements.track: all
+  authentication:
+    superuser:
+      username: postgres
+    replication:
+      username: replicator
+      password: repl_staging

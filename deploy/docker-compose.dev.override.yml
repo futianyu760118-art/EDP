@@ -1,0 +1,14 @@
+# 本地验证 override：宿主 5432/8000 被占用时的端口映射（db→15432、api→18000、web→9080）。
+# 用法：docker compose -f deploy/docker-compose.dev.yml -f deploy/docker-compose.dev.override.yml up -d --build
+services:
+  db:
+    ports: !override
+      - "15432:5432"
+
+  api:
+    ports: !override
+      - "18000:8000"
+
+  web:
+    ports: !override
+      - "9080:80"

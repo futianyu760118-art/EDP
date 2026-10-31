@@ -1,0 +1,27 @@
+[project]
+name = "edp-api"
+version = "0.1.0"
+description = "EDP 数据平台 API 服务（FastAPI 模块化单体）"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg",
+    "alembic",
+    "pydantic>=2.7",
+    "pydantic-settings",
+    "pyjwt>=2.8",
+    "argon2-cffi",
+    "edp-adapters",
+]
+
+[tool.uv.sources]
+edp-adapters = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["edp_api"]

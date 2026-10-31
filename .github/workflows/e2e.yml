@@ -1,0 +1,129 @@
+name: e2e
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "contracts/**"
+      - ".github/workflows/e2e.yml"
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: edp_migrator
+          POSTGRES_PASSWORD: edp_dev
+          POSTGRES_DB: edp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # 迁移走 migrator；应用（uvicorn/seed）走 edp_app 角色（FORCE RLS，
+      # 0001 迁移幂等创建——与集成测试 conftest 同口径）
+      MIGRATOR_DATABASE_URL: postgresql+asyncpg://edp_migrator:edp_dev@localhost:5432/edp
+      APP_DATABASE_URL: postgresql+asyncpg://edp_app:edp_app@localhost:5432/edp
+      EDP_JWT_SECRET: dev-secret
+      # E2E 入口/直调 API（CI 真栈 api 在 8000；preview 反代沿此转发）
+      E2E_BASE_URL: http://localhost:4173
+      E2E_API_BASE: http://localhost:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # ---- backend：依赖 + 迁移 + seed（真栈基线）----
+      - run: uv sync
+        working-directory: backend
+      - run: uv run alembic upgrade head
+        working-directory: backend
+        env:
+          EDP_DATABASE_URL: ${{ env.MIGRATOR_DATABASE_URL }}
+      - run: uv run python -m edp_api.modules.demo.cli seed
+        working-directory: backend
+        env:
+          EDP_DATABASE_URL: ${{ env.APP_DATABASE_URL }}
+
+      # ---- backend：uvicorn(8000) + worker 后台常驻 + 健康等待 ----
+      - name: Start api server
+        working-directory: backend
+        run: |
+          nohup uv run uvicorn edp_api.main:app --port 8000 > /tmp/uvicorn.log 2>&1 &
+          for i in $(seq 1 60); do
+            # /api/v1/* 全部需认证——以 openapi.json 作无认证就绪探针
+            if curl -sf http://localhost:8000/openapi.json > /dev/null; then echo "api ready"; exit 0; fi
+            sleep 1
+          done
+          echo "api not ready"; cat /tmp/uvicorn.log; exit 1
+        env:
+          EDP_DATABASE_URL: ${{ env.APP_DATABASE_URL }}
+      - name: Start outbox worker
+        working-directory: backend
+        run: nohup uv run python -m edp_worker.main > /tmp/worker.log 2>&1 &
+        env:
+          EDP_DATABASE_URL: ${{ env.APP_DATABASE_URL }}
+
+      # ---- frontend：安装 + 同源构建（.env.e2e 置空 VITE_API_BASE）+ preview(4173) ----
+      # 后端无 CORS 中间件（web 容器形态 = nginx /api 反代）——E2E 以同源
+      # 相对路径构建，vite preview 经 preview.proxy（→ E2E_API_BASE）转发 /api
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm --filter web build --mode e2e
+        working-directory: frontend
+      - name: Start web preview
+        working-directory: frontend
+        run: |
+          nohup pnpm --filter web preview --port 4173 --strictPort > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4173/ > /dev/null; then echo "preview ready"; exit 0; fi
+            sleep 1
+          done
+          echo "preview not ready"; cat /tmp/preview.log; exit 1
+
+      # ---- Playwright 真栈实跑 ----
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend/apps/web
+      - run: pnpm e2e
+        working-directory: frontend/apps/web
+
+      # ---- 视觉回归基线（EDP-603）：组件层 storybook + 页面层真栈 ----
+      # 页面基线依赖固定演示锚（全部业务时间文本确定）——重置 seed 后
+      # 重跑（功能 e2e 已消费案例 OPEN 状态，此处重置恰好复位）
+      - name: Re-seed with fixed anchor (visual baselines)
+        working-directory: backend
+        run: uv run python -m edp_api.modules.demo.cli seed --reset --anchor 2026-08-01T00:00:00+00:00
+        env:
+          EDP_DATABASE_URL: ${{ env.APP_DATABASE_URL }}
+      - run: pnpm --filter web build-storybook
+        working-directory: frontend
+      - run: pnpm e2e:visual
+        working-directory: frontend/apps/web
+
+      - name: Upload playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/apps/web/playwright-report
+            frontend/apps/web/test-results
+            /tmp/uvicorn.log
+            /tmp/worker.log
+          retention-days: 7

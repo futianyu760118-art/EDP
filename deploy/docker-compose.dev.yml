@@ -1,0 +1,73 @@
+name: edp-dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    # pg_stat_statements 供给（W6 T3 / EDP-033 压测线）：preload 库 + 全量
+    # 跟踪；扩展本体由 pg-init/02-extensions.sql 建立（仅首次初始化执行）
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+    environment:
+      POSTGRES_USER: edp_migrator
+      POSTGRES_PASSWORD: edp_dev
+      POSTGRES_DB: edp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./pg-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edp_migrator -d edp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      EDP_DATABASE_URL: postgresql+asyncpg://edp_app:edp_app@db:5432/edp
+      EDP_JWT_SECRET: dev-secret
+      # 演练记录 JSON 供给（W5 终审 I-1）：GET /admin/drills 读此路径
+      EDP_DRILLS_FILE: /workspace/deploy/drills/drill-records.json
+    command: ["uvicorn", "edp_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      # 镜像构建上下文为 backend/（不含 deploy/），演练记录经只读挂载供给
+      - ./drills/drill-records.json:/workspace/deploy/drills/drill-records.json:ro
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: apps/worker/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      EDP_DATABASE_URL: postgresql+asyncpg://edp_app:edp_app@db:5432/edp
+      EDP_JWT_SECRET: dev-secret
+
+  # 前端：nginx 托管 SPA + /api 反代到 api 服务（VITE_API_BASE 构建期置空 = 同源相对路径）
+  web:
+    build:
+      context: ../frontend
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE: ""
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata:

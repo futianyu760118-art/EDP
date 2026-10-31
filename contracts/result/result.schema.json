@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/result/result.schema.json",
+  "title": "Result 结果语义契约",
+  "description": "AEOS 经营结果契约（V1.1 第七节，本轮重点新增）。各自治中心不把内部表暴露给 EBMS，必须输出标准 Result；无 Evidence 的 Result 不得作为正式经营事实。",
+  "type": "object",
+  "required": [
+    "result_id",
+    "result_type",
+    "tenant_id",
+    "object_ref",
+    "domain",
+    "period",
+    "status",
+    "generated_by",
+    "generated_at",
+    "version"
+  ],
+  "properties": {
+    "result_id": { "type": "string", "format": "uuid" },
+    "result_type": {
+      "type": "string",
+      "description": "结果类型（如 Delivery.OrderDeliveryRisk）"
+    },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "object_ref": {
+      "type": "object",
+      "description": "结果对象引用（如 Order/2026-10025）"
+    },
+    "domain": { "type": "string", "description": "业务域（SALES / DELIVERY / QUALITY / FINANCE / RD）" },
+    "period": { "type": "string", "description": "经营周期（如 AEOS-P10 / 2026-09）" },
+    "metric_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "关联指标（引用 Metric Registry metric_id）"
+    },
+    "value": { "type": ["object", "number", "string"], "description": "结果值（结构体或标量）" },
+    "status": { "type": "string", "description": "结果状态（如 HIGH_RISK / NORMAL / FAILED）" },
+    "source_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "来源事实引用（OFFICIAL 对象/事件）"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "证据引用；正式经营事实必填（非空）"
+    },
+    "generated_by": { "type": "string", "description": "生成方（系统/服务/AI）" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "verified_status": { "type": ["string", "null"], "description": "核验状态" },
+    "verified_by": { "type": ["string", "null"], "description": "核验人" },
+    "verified_at": { "type": ["string", "null"], "format": "date-time" },
+    "version": { "type": "integer", "minimum": 1 }
+  },
+  "additionalProperties": true
+}

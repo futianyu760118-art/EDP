@@ -1,0 +1,68 @@
+[project]
+name = "edp-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+# 根聚合声明全部 workspace 成员，使 `uv sync` 一并安装（成员经 tool.uv.sources 指向 workspace）
+dependencies = [
+    "edp-api",
+    "edp-worker",
+    "edp-adapters",
+]
+
+[tool.uv.workspace]
+members = ["apps/*", "packages/*"]
+
+[tool.uv.sources]
+edp-api = { workspace = true }
+edp-worker = { workspace = true }
+edp-adapters = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "import-linter>=2.0",
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "testcontainers[kafka,postgresql]>=4",
+    "httpx>=0.27",
+    "asgi-lifespan>=2",
+    "locust>=2.32",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.importlinter]
+root_packages = ["edp_api"]
+
+[[tool.importlinter.contracts]]
+name = "Modules depend only on core"
+type = "forbidden"
+source_modules = ["edp_api.core"]
+forbidden_modules = ["edp_api.modules"]
+
+[[tool.importlinter.contracts]]
+name = "Modules may import other modules' service only"
+type = "forbidden"
+source_modules = [
+    "edp_api.modules.*",
+]
+forbidden_modules = [
+    "edp_api.modules.*.models",
+    "edp_api.modules.*.router",
+]
+# 设计意图（2.3.2）约束的是"直接跨模块 import"：模块自身 service 允许用自身
+# ORM 映射，跨模块仅准 service.py。forbidden 默认连带传递链（经对方 service
+# 触达其内部 models）会误判该模式，故仅检查直接 import。
+allow_indirect_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "integration: 集成测试（testcontainers 起 Docker PG，耗时较长；跳过用 -m 'not integration'）",
+]

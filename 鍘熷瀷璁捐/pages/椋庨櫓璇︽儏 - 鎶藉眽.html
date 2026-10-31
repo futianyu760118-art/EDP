@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运营总览 · 风险详情抽屉 · AEOS EDP</title>
+    <style id="theme-vars">
+:root {
+  --edp-background: #f7f8fc;
+  --edp-foreground: #172033;
+  --edp-card: #ffffff;
+  --edp-card-foreground: #172033;
+  --edp-popover: #ffffff;
+  --edp-popover-foreground: #172033;
+  --edp-primary: #5b5ce2;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #ececff;
+  --edp-primary-100: #dcdcff;
+  --edp-primary-200: #c6c7ed;
+  --edp-muted: #f3f4f7;
+  --edp-muted-foreground: #788298;
+  --edp-border: #e8ebf2;
+  --edp-input: #e8ebf2;
+  --edp-ring: #5b5ce2;
+  --edp-radius-small: 4px;
+  --edp-radius-medium: 8px;
+  --edp-radius-large: 12px;
+  --edp-radius-full: 9999px;
+
+  --edp-state-success: #12a47d;
+  --edp-state-success-bg: #e9fbf4;
+  --edp-state-warning: #d97706;
+  --edp-state-warning-bg: #fff7e8;
+  --edp-state-error: #df4f5f;
+  --edp-state-error-bg: #fff0f2;
+  --edp-state-info: #3b82f6;
+  --edp-state-info-bg: #edf5ff;
+
+  --edp-surface-2: #fbfcff;
+  --edp-ink-2: #68738a;
+  --edp-ink-3: #969fb1;
+
+  --edp-shadow-1: 0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.03);
+  --edp-shadow-2: 0 8px 24px -8px rgba(15,23,42,.12);
+  --edp-shadow-3: 0 24px 60px -20px rgba(15,23,42,.18);
+}
+
+.dark {
+  --edp-background: #0b0c14;
+  --edp-foreground: #e8ebf2;
+  --edp-card: #131520;
+  --edp-card-foreground: #e8ebf2;
+  --edp-popover: #131520;
+  --edp-popover-foreground: #e8ebf2;
+  --edp-primary: #7b7cf0;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #1e1f3a;
+  --edp-primary-100: #2a2b4d;
+  --edp-primary-200: #3d3e6a;
+  --edp-muted: #1c1e2c;
+  --edp-muted-foreground: #9aa1af;
+  --edp-border: #2a2d3d;
+  --edp-input: #2a2d3d;
+  --edp-ring: #7b7cf0;
+  --edp-surface-2: #181a28;
+  --edp-ink-2: #9aa1af;
+  --edp-ink-3: #6b7280;
+}
+
+/* Typography */
+.edp-font-sans {
+  font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+.edp-font-mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Noto Sans SC Mono", monospace;
+}
+
+/* Surface */
+.edp-bg-page { background-color: var(--edp-background); }
+.edp-bg-card { background-color: var(--edp-card); }
+.edp-bg-muted { background-color: var(--edp-muted); }
+.edp-bg-primary { background-color: var(--edp-primary); }
+.edp-bg-primary-50 { background-color: var(--edp-primary-50); }
+
+/* Text */
+.edp-text-ink { color: var(--edp-foreground); }
+.edp-text-muted { color: var(--edp-muted-foreground); }
+.edp-text-primary { color: var(--edp-primary); }
+.edp-text-on-primary { color: var(--edp-primary-foreground); }
+
+/* Border */
+.edp-border { border: 1px solid var(--edp-border); }
+.edp-border-t { border-top: 1px solid var(--edp-border); }
+.edp-border-b { border-bottom: 1px solid var(--edp-border); }
+.edp-border-r { border-right: 1px solid var(--edp-border); }
+
+/* Radius */
+.edp-rounded-sm { border-radius: var(--edp-radius-small); }
+.edp-rounded-md { border-radius: var(--edp-radius-medium); }
+.edp-rounded-lg { border-radius: var(--edp-radius-large); }
+.edp-rounded-full { border-radius: var(--edp-radius-full); }
+
+/* Shadow */
+.edp-shadow-1 { box-shadow: var(--edp-shadow-1); }
+.edp-shadow-2 { box-shadow: var(--edp-shadow-2); }
+.edp-shadow-3 { box-shadow: var(--edp-shadow-3); }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--edp-background);
+    --color-foreground: var(--edp-foreground);
+    --color-card: var(--edp-card);
+    --color-card-foreground: var(--edp-card-foreground);
+    --color-popover: var(--edp-popover);
+    --color-popover-foreground: var(--edp-popover-foreground);
+    --color-primary: var(--edp-primary);
+    --color-primary-foreground: var(--edp-primary-foreground);
+    --color-muted: var(--edp-muted);
+    --color-muted-foreground: var(--edp-muted-foreground);
+    --color-border: var(--edp-border);
+    --color-input: var(--edp-input);
+    --color-ring: var(--edp-ring);
+    --radius-sm: var(--edp-radius-small);
+    --radius-md: var(--edp-radius-medium);
+    --radius-lg: var(--edp-radius-large);
+  }
+  @layer base {
+    body { background: var(--edp-background); color: var(--edp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--edp-background); }
+      .text-background { color: var(--edp-background); }
+      .border-background { border-color: var(--edp-background); }
+      .ring-background { --tw-ring-color: var(--edp-background); }
+      .bg-foreground { background-color: var(--edp-foreground); }
+      .text-foreground { color: var(--edp-foreground); }
+      .border-foreground { border-color: var(--edp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--edp-foreground); }
+      .bg-card { background-color: var(--edp-card); }
+      .text-card { color: var(--edp-card); }
+      .border-card { border-color: var(--edp-card); }
+      .ring-card { --tw-ring-color: var(--edp-card); }
+      .bg-card-foreground { background-color: var(--edp-card-foreground); }
+      .text-card-foreground { color: var(--edp-card-foreground); }
+      .border-card-foreground { border-color: var(--edp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--edp-card-foreground); }
+      .bg-popover { background-color: var(--edp-popover); }
+      .text-popover { color: var(--edp-popover); }
+      .border-popover { border-color: var(--edp-popover); }
+      .ring-popover { --tw-ring-color: var(--edp-popover); }
+      .bg-popover-foreground { background-color: var(--edp-popover-foreground); }
+      .text-popover-foreground { color: var(--edp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--edp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--edp-popover-foreground); }
+      .bg-primary { background-color: var(--edp-primary); }
+      .text-primary { color: var(--edp-primary); }
+      .border-primary { border-color: var(--edp-primary); }
+      .ring-primary { --tw-ring-color: var(--edp-primary); }
+      .bg-primary-foreground { background-color: var(--edp-primary-foreground); }
+      .text-primary-foreground { color: var(--edp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--edp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--edp-primary-foreground); }
+      .bg-muted { background-color: var(--edp-muted); }
+      .text-muted { color: var(--edp-muted); }
+      .border-muted { border-color: var(--edp-muted); }
+      .ring-muted { --tw-ring-color: var(--edp-muted); }
+      .bg-muted-foreground { background-color: var(--edp-muted-foreground); }
+      .text-muted-foreground { color: var(--edp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--edp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--edp-muted-foreground); }
+      .bg-border { background-color: var(--edp-border); }
+      .text-border { color: var(--edp-border); }
+      .border-border { border-color: var(--edp-border); }
+      .ring-border { --tw-ring-color: var(--edp-border); }
+      .bg-input { background-color: var(--edp-input); }
+      .text-input { color: var(--edp-input); }
+      .border-input { border-color: var(--edp-input); }
+      .ring-input { --tw-ring-color: var(--edp-input); }
+      .bg-ring { background-color: var(--edp-ring); }
+      .text-ring { color: var(--edp-ring); }
+      .border-ring { border-color: var(--edp-ring); }
+      .ring-ring { --tw-ring-color: var(--edp-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+    <style id="critical-layout">
+      .page-shell { display: flex; min-height: 100vh; }
+      .sidebar { width: 250px; flex: 0 0 250px; }
+      .topbar { height: 66px; }
+      .main-stage { flex: 1 1 auto; margin-left: 250px; padding-top: 66px; }
+      .page-content { padding: 24px; max-width: 1440px; }
+      .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+      .bg-state-success { background-color: var(--edp-state-success); }
+      .text-state-success { color: var(--edp-state-success); }
+      .bg-state-success-bg { background-color: var(--edp-state-success-bg); }
+      .bg-state-warning { background-color: var(--edp-state-warning); }
+      .text-state-warning { color: var(--edp-state-warning); }
+      .bg-state-warning-bg { background-color: var(--edp-state-warning-bg); }
+      .bg-state-error { background-color: var(--edp-state-error); }
+      .text-state-error { color: var(--edp-state-error); }
+      .bg-state-error-bg { background-color: var(--edp-state-error-bg); }
+      .bg-state-info { background-color: var(--edp-state-info); }
+      .text-state-info { color: var(--edp-state-info); }
+      .bg-state-info-bg { background-color: var(--edp-state-info-bg); }
+      .bg-primary-light { background-color: var(--edp-primary-50); }
+      .bg-primary-50 { background-color: var(--edp-primary-50); }
+      @media (max-width: 1200px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        .three-col { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 900px) {
+        .two-col { grid-template-columns: 1fr; }
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+<aside class="fixed left-0 top-0 bottom-0 w-[250px] bg-card border-r border-border z-20 flex flex-col sidebar">
+  <div class="h-[70px] flex items-center px-4 border-b border-border">
+    <div class="w-9 h-9 rounded-lg bg-primary text-primary-foreground grid place-items-center font-extrabold text-lg shadow-sm">E</div>
+    <div class="ml-2.5">
+      <b class="text-sm">AEOS EDP</b>
+      <span class="block text-[10px] text-muted-foreground">Evidence Data Platform</span>
+    </div>
+  </div>
+  <div class="p-3.5">
+    <button class="w-full border border-border bg-card rounded-xl p-2.5 flex items-center gap-2 hover:bg-muted transition-colors" data-dom-id="tenant-switch">
+      <div class="w-7 h-7 rounded-lg bg-primary-50 text-primary grid place-items-center text-xs font-extrabold">AC</div>
+      <div class="min-w-0 flex-1 text-left">
+        <b class="text-xs block truncate">ACME · 华东事业群</b>
+        <span class="text-[10px] text-muted-foreground block truncate">Enterprise · 生产环境</span>
+      </div>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-muted-foreground"></i>
+    </button>
+  </div>
+  <nav class="flex-1 px-2.5 py-2 overflow-y-auto">
+    <button class="nav-item active w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-overview" data-nav="overview" data-active="true">
+      <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i>
+      <span>运营总览</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">数据工作台</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-objects" data-nav="objects">
+      <i data-lucide="layers" class="w-[18px] h-[18px]"></i>
+      <span>业务对象</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-events" data-nav="events">
+      <i data-lucide="zap" class="w-[18px] h-[18px]"></i>
+      <span>事件流</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-evidence" data-nav="evidence">
+      <i data-lucide="shield-check" class="w-[18px] h-[18px]"></i>
+      <span>证据库</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">运维监控</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-quality" data-nav="quality">
+      <i data-lucide="triangle-alert" class="w-[18px] h-[18px]"></i>
+      <span>数据质量</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-governance" data-nav="governance">
+      <i data-lucide="scroll-text" class="w-[18px] h-[18px]"></i>
+      <span>审计日志</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-systems" data-nav="systems">
+      <i data-lucide="plug" class="w-[18px] h-[18px]"></i>
+      <span>适配器管理</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">平台配置</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-tenants" data-nav="tenants">
+      <i data-lucide="building-2" class="w-[18px] h-[18px]"></i>
+      <span>租户管理</span>
+    </button>
+  </nav>
+  <div class="p-3.5 border-t border-border">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-full bg-primary-50 text-primary grid place-items-center text-[11px] font-extrabold">YL</div>
+      <div class="flex-1 min-w-0">
+        <b class="text-xs block truncate">Y. Liu</b>
+        <span class="text-[10px] text-muted-foreground block truncate">Workspace Admin</span>
+      </div>
+      <button class="w-8 h-8 rounded-lg border border-border bg-card grid place-items-center text-muted-foreground hover:bg-muted" data-dom-id="settings-btn">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<header class="fixed top-0 left-[250px] right-0 h-[66px] bg-card/92 backdrop-blur border-b border-border z-10 flex items-center justify-between px-6 topbar">
+  <div class="flex items-center gap-4">
+    <div class="text-xs text-muted-foreground">EDP / <b class="text-foreground font-semibold" data-slot="crumb">运营总览</b></div>
+    <div class="relative hidden md:block">
+      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"></i>
+      <input type="text" placeholder="搜索对象、事件、证据…" class="h-9 w-[330px] pl-9 pr-3 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent" data-dom-id="global-search" />
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <button class="h-9 px-2.5 border border-border bg-card rounded-lg text-muted-foreground hover:bg-muted flex items-center gap-1.5" data-dom-id="notifications-btn">
+      <i data-lucide="bell" class="w-4 h-4"></i>
+      <span class="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">3</span>
+    </button>
+    <button class="h-9 px-3 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-1.5" data-dom-id="command-palette">
+      <i data-lucide="command" class="w-4 h-4"></i>
+      <span>K</span>
+    </button>
+    <button class="h-9 px-2.5 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-2">
+      <div class="w-6 h-6 rounded-full bg-primary-50 text-primary grid place-items-center text-[9px] font-extrabold">YL</div>
+      <span>Y. Liu</span>
+      <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+    </button>
+  </div>
+</header>
+
+<main class="main-stage bg-background">
+  <div class="page-content">
+    <!-- Hero -->
+    <section class="bg-card border border-border rounded-xl p-6 mb-4">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="flex-1">
+          <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-state-success-bg text-state-success text-[10px] font-medium mb-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-state-success"></span>
+            运行中 · 多租户工作空间
+          </div>
+          <h1 class="text-xl font-semibold text-foreground mb-2">今天的 EDP 状态：证据链健康，1 个 L3 风险需要处理</h1>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button class="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 flex items-center gap-1.5">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            查看风险详情
+          </button>
+          <button class="h-9 px-4 border border-border bg-card text-foreground rounded-lg text-xs font-medium hover:bg-muted flex items-center gap-1.5">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            导出日报
+          </button>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">对象覆盖率</div>
+          <div class="text-2xl font-semibold text-foreground">100%</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">1,247 / 1,247</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">P95 接入延迟</div>
+          <div class="text-2xl font-semibold text-foreground">0.82s</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">过去 24 小时</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">适配器成功率</div>
+          <div class="text-2xl font-semibold text-foreground">99.4%</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">失败 3 次 / 重试成功</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KPI Grid -->
+    <section class="kpi-grid mb-4">
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">业务对象</div>
+          <div class="text-xl font-semibold text-foreground">1,247</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">+12 较昨日</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="layers" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">24H 事件</div>
+          <div class="text-xl font-semibold text-foreground">18,421</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">峰值 2,104 / 小时</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="zap" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">证据存储</div>
+          <div class="text-xl font-semibold text-foreground">52.6K</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">+847 今日</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">适配器成功率</div>
+          <div class="text-xl font-semibold text-foreground">99.4%</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">3 次失败已恢复</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="plug" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">DLQ 队列</div>
+          <div class="text-xl font-semibold text-foreground">3</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">待人工复核</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-state-warning-bg text-state-warning grid place-items-center"><i data-lucide="triangle-alert" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">P95 延迟</div>
+          <div class="text-xl font-semibold text-foreground">0.82s</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">环比下降 0.11s</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="command" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">审计日志</div>
+          <div class="text-xl font-semibold text-foreground">12.4K</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">最近 7 天</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="scroll-text" class="w-4 h-4"></i></div>
+      </div>
+      <div class="bg-card border border-border rounded-xl p-4 flex items-start justify-between">
+        <div>
+          <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">策略命中</div>
+          <div class="text-xl font-semibold text-foreground">2,981</div>
+          <div class="text-[11px] text-muted-foreground mt-0.5">+56 今日</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+      </div>
+    </section>
+
+    <!-- Two-column: risk + timeline -->
+    <section class="two-col mb-4">
+      <div class="bg-card border border-border rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-foreground flex items-center gap-2">
+            <i data-lucide="triangle-alert" class="w-4 h-4 text-state-error"></i>
+            重点风险 / 异常
+          </h2>
+          <a href="#" class="text-xs text-primary hover:underline">查看全部</a>
+        </div>
+        <div class="space-y-3">
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-state-error-bg text-state-error">L3</span>
+                <span class="text-xs font-medium text-foreground">ORD-202609-001</span>
+              </div>
+              <span class="text-[10px] text-muted-foreground">09-10 10:42</span>
+            </div>
+            <div class="text-xs text-foreground mb-1">订单 A · 华东重点客户</div>
+            <div class="text-[11px] text-muted-foreground">供应商 S-118 预计交期延迟 14 天，物料 X 缺口 1000。</div>
+          </div>
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-state-warning-bg text-state-warning">L2</span>
+                <span class="text-xs font-medium text-foreground">CUST-771</span>
+              </div>
+              <span class="text-[10px] text-muted-foreground">09-10 10:31</span>
+            </div>
+            <div class="text-xs text-foreground mb-1">客户 CUST-771 · 主数据冲突</div>
+            <div class="text-[11px] text-muted-foreground">客户 ID 在 ERP / MDM 中存在冲突映射，待确认。</div>
+          </div>
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-state-warning-bg text-state-warning">L2</span>
+                <span class="text-xs font-medium text-foreground">PO-38117</span>
+              </div>
+              <span class="text-[10px] text-muted-foreground">09-10 10:41</span>
+            </div>
+            <div class="text-xs text-foreground mb-1">采购 PO-38117 · S-118</div>
+            <div class="text-[11px] text-muted-foreground">计划到货日期后移 14 天，已触发替代料评估。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-card border border-border rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-foreground flex items-center gap-2">
+            <i data-lucide="zap" class="w-4 h-4 text-primary"></i>
+            事件与闭环
+          </h2>
+          <a href="#" class="text-xs text-primary hover:underline">进入事件流</a>
+        </div>
+        <div class="relative pl-4 border-l border-border space-y-4">
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 12:20</div>
+            <div class="text-xs text-foreground">采购加急任务完成，等待业务结果验证</div>
+            <div class="text-[11px] text-muted-foreground">ACT-7741 · Action</div>
+          </div>
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-state-success border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 11:08</div>
+            <div class="text-xs text-foreground">审批通过：加急采购 + 替代料评估</div>
+            <div class="text-[11px] text-muted-foreground">DC-1048 · Human</div>
+          </div>
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-state-info border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 10:42</div>
+            <div class="text-xs text-foreground">Delivery.OrderRisk 评分 92 / L3</div>
+            <div class="text-[11px] text-muted-foreground">ORD-202609-001 · DQ Engine</div>
+          </div>
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-state-warning border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 10:41</div>
+            <div class="text-xs text-foreground">供应商 S-118 预计交期延迟 14 天</div>
+            <div class="text-[11px] text-muted-foreground">ORD-202609-001 · ERP-S4</div>
+          </div>
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-state-error border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 10:31</div>
+            <div class="text-xs text-foreground">客户 ID 在 ERP / MDM 中存在冲突映射</div>
+            <div class="text-[11px] text-muted-foreground">CUST-771 · DQ Engine</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Three-column: data health + evidence + audit -->
+    <section class="three-col">
+      <div class="bg-card border border-border rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+
+          <span class="text-[10px] text-muted-foreground">过去 24 小时</span>
+        </div>
+        <div class="h-32 flex items-end gap-2 mb-3">
+          <div class="flex-1 bg-primary/10 rounded-t" style="height: 45%"></div>
+          <div class="flex-1 bg-primary/20 rounded-t" style="height: 62%"></div>
+          <div class="flex-1 bg-primary/30 rounded-t" style="height: 78%"></div>
+          <div class="flex-1 bg-primary/40 rounded-t" style="height: 55%"></div>
+          <div class="flex-1 bg-primary/50 rounded-t" style="height: 88%"></div>
+          <div class="flex-1 bg-primary/60 rounded-t" style="height: 70%"></div>
+          <div class="flex-1 bg-primary/70 rounded-t" style="height: 92%"></div>
+          <div class="flex-1 bg-primary/80 rounded-t" style="height: 66%"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+          <div>
+            <div class="text-[10px] text-muted-foreground">接入事件</div>
+            <div class="text-sm font-semibold text-foreground">18,421</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-muted-foreground">失败重试</div>
+            <div class="text-sm font-semibold text-foreground">3</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-muted-foreground">平均延迟</div>
+            <div class="text-sm font-semibold text-foreground">0.41s</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-muted-foreground">成功率</div>
+            <div class="text-sm font-semibold text-state-success">99.4%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-card border border-border rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-state-success-bg text-state-success">健康</span>
+        </div>
+        <div class="flex items-center justify-center py-4">
+          <div class="relative w-24 h-24">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <path class="text-border" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4" />
+              <path class="text-primary" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4" />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-lg font-semibold text-foreground">100%</span>
+              <span class="text-[9px] text-muted-foreground">完整</span>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2 pt-3 border-t border-border">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted-foreground">Primary Evidence</span>
+            <span class="font-medium text-foreground">38.2K</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted-foreground">Derived Evidence</span>
+            <span class="font-medium text-foreground">14.4K</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted-foreground">校验和有效</span>
+            <span class="font-medium text-state-success">99.99%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-card border border-border rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+
+          <a href="#" class="text-xs text-primary hover:underline">更多</a>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-primary-50 text-primary grid place-items-center shrink-0"><i data-lucide="user" class="w-3 h-3"></i></div>
+            <div class="min-w-0">
+              <div class="text-xs text-foreground truncate">Y. Liu 审批通过决策 DC-1048</div>
+              <div class="text-[10px] text-muted-foreground">09-10 11:08 · 审计</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-primary-50 text-primary grid place-items-center shrink-0"><i data-lucide="settings" class="w-3 h-3"></i></div>
+            <div class="min-w-0">
+              <div class="text-xs text-foreground truncate">系统完成适配器重试策略更新</div>
+              <div class="text-[10px] text-muted-foreground">09-10 10:15 · 系统</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-primary-50 text-primary grid place-items-center shrink-0"><i data-lucide="shield-check" class="w-3 h-3"></i></div>
+            <div class="min-w-0">
+              <div class="text-xs text-foreground truncate">证据 ev-2b90 通过完整性校验</div>
+              <div class="text-[10px] text-muted-foreground">09-10 10:42 · 证据库</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-primary-50 text-primary grid place-items-center shrink-0"><i data-lucide="plug" class="w-3 h-3"></i></div>
+            <div class="min-w-0">
+              <div class="text-xs text-foreground truncate">PROCURE-X 适配器重试成功</div>
+              <div class="text-[10px] text-muted-foreground">09-10 09:44 · 适配器</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- Risk detail drawer overlay -->
+<div id="risk-detail-drawer" class="fixed inset-y-0 left-[250px] right-0 z-30 flex justify-end bg-foreground/15 backdrop-blur-sm">
+  <div class="w-[420px] h-full bg-card border-l border-border shadow-3 flex flex-col rounded-l-lg" role="dialog" aria-modal="true" aria-labelledby="risk-drawer-title">
+    <!-- Drawer header -->
+    <div class="flex items-start justify-between gap-4 p-4 border-b border-border">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2 mb-1.5">
+          <h2 id="risk-drawer-title" class="text-lg font-semibold text-foreground truncate">风险事件 RSK-20260910-001</h2>
+          <span class="shrink-0 px-2 py-0.5 rounded text-[10px] font-medium bg-state-error-bg text-state-error">高</span>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-state-warning"></span>处理中</span>
+          <span>L3 · 交付风险</span>
+          <span>09-10 10:42</span>
+        </div>
+      </div>
+      <button type="button" data-dom-id="drawer-close" class="shrink-0 w-8 h-8 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted grid place-items-center focus:outline-none focus:ring-2 focus:ring-ring" aria-label="关闭">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Drawer body -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-5">
+      <!-- Affected object -->
+      <div class="border border-border rounded-lg p-3">
+        <div class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">受影响对象</div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-primary-50 text-primary grid place-items-center shrink-0">
+            <i data-lucide="package" class="w-5 h-5"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-foreground truncate">订单 ORD-202609-001</div>
+            <div class="text-[11px] text-muted-foreground truncate">华东重点客户 · 供应商 S-118</div>
+          </div>
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+          <div class="bg-muted rounded-md px-2.5 py-2">
+            <span class="text-muted-foreground block">物料缺口</span>
+            <span class="font-medium text-foreground">1,000 件</span>
+          </div>
+          <div class="bg-muted rounded-md px-2.5 py-2">
+            <span class="text-muted-foreground block">预计延迟</span>
+            <span class="font-medium text-state-error">14 天</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">事件时间线</div>
+        <div class="relative pl-4 border-l border-border space-y-4">
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-state-error border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 10:42</div>
+            <div class="text-xs text-foreground font-medium">风险识别：Delivery.OrderRisk 评分 92 / L3</div>
+            <div class="text-[11px] text-muted-foreground">ORD-202609-001 · DQ Engine</div>
+          </div>
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-state-warning border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 10:41</div>
+            <div class="text-xs text-foreground font-medium">供应商 S-118 预计交期延迟 14 天</div>
+            <div class="text-[11px] text-muted-foreground">ERP-S4 · 物料 X</div>
+          </div>
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-state-success border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 11:08</div>
+            <div class="text-xs text-foreground font-medium">审批通过：加急采购 + 替代料评估</div>
+            <div class="text-[11px] text-muted-foreground">DC-1048 · Y. Liu</div>
+          </div>
+          <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-card"></span>
+            <div class="text-[10px] text-muted-foreground mb-0.5">09-10 12:20</div>
+            <div class="text-xs text-foreground font-medium">采购加急任务完成，等待业务结果验证</div>
+            <div class="text-[11px] text-muted-foreground">ACT-7741 · Action</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evidence list -->
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">关联证据</div>
+        <div class="space-y-2">
+          <a href="#" data-dom-id="risk-evidence-link" class="flex items-center gap-3 border border-border rounded-lg p-3 hover:bg-muted transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center shrink-0">
+              <i data-lucide="file-check" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-medium text-foreground group-hover:text-primary truncate">ev-2b90 · 供应商交期确认函</div>
+              <div class="text-[10px] text-muted-foreground">PDF · 09-10 10:41 · 完整性校验通过</div>
+            </div>
+            <i data-lucide="external-link" class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary"></i>
+          </a>
+          <a href="#" class="flex items-center gap-3 border border-border rounded-lg p-3 hover:bg-muted transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center shrink-0">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-medium text-foreground group-hover:text-primary truncate">ev-3a12 · 替代料评估表</div>
+              <div class="text-[10px] text-muted-foreground">XLSX · 09-10 11:30 · 派生证据</div>
+            </div>
+            <i data-lucide="external-link" class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary"></i>
+          </a>
+          <a href="#" class="flex items-center gap-3 border border-border rounded-lg p-3 hover:bg-muted transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center shrink-0">
+              <i data-lucide="message-square" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-medium text-foreground group-hover:text-primary truncate">dc-1048 · 加急采购审批决策</div>
+              <div class="text-[10px] text-muted-foreground">Decision · 09-10 11:08 · Y. Liu</div>
+            </div>
+            <i data-lucide="external-link" class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer footer -->
+    <div class="p-4 border-t border-border flex items-center justify-end gap-2">
+      <button type="button" class="h-9 px-4 border border-border bg-card text-foreground rounded-lg text-xs font-medium hover:bg-muted flex items-center gap-1.5">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        创建任务
+      </button>
+      <button type="button" class="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 flex items-center gap-1.5">
+        <i data-lucide="check" class="w-4 h-4"></i>
+        标记处理
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

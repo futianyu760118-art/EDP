@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/governance/cleaning-rule.schema.json",
+  "title": "Data Cleaning Rule 清洗规则契约",
+  "description": "统一数据清洗规则中心（V1.1 第三十五节）。所有自动修复必须记录 before_value / after_value / rule_id / rule_version / executed_at / confidence。",
+  "type": "object",
+  "required": [
+    "rule_id",
+    "rule_name",
+    "object_type",
+    "field",
+    "rule_type",
+    "severity",
+    "owner",
+    "version",
+    "effective_from",
+    "auto_fix",
+    "review_required"
+  ],
+  "properties": {
+    "rule_id": { "type": "string", "format": "uuid" },
+    "rule_name": { "type": "string", "minLength": 1 },
+    "object_type": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" },
+    "field": { "type": ["string", "null"], "description": "适用字段；空 = 对象级规则" },
+    "rule_type": {
+      "type": "string",
+      "enum": [
+        "FORMAT",
+        "NORMALIZATION",
+        "DEDUPLICATION",
+        "MAPPING",
+        "RANGE_CHECK",
+        "REFERENTIAL_CHECK",
+        "BUSINESS_RULE",
+        "UNIT_CONVERSION",
+        "CURRENCY_NORMALIZATION",
+        "ENTITY_RESOLUTION"
+      ]
+    },
+    "condition": { "type": ["string", "null"], "description": "触发条件表达式" },
+    "transformation": { "type": "string", "description": "转换定义（可版本化的规则体）" },
+    "severity": { "type": "string", "enum": ["BLOCK", "WARN", "INFO"] },
+    "owner": { "type": "string", "minLength": 1, "description": "规则 Owner（业务域）" },
+    "version": { "type": "integer", "minimum": 1 },
+    "effective_from": { "type": "string", "format": "date-time" },
+    "effective_to": { "type": ["string", "null"], "format": "date-time" },
+    "auto_fix": { "type": "boolean", "description": "允许自动修复；true 时修复留痕" },
+    "review_required": { "type": "boolean", "description": "修复后是否要求人工确认" }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "fixAudit": {
+      "type": "object",
+      "required": ["before_value", "after_value", "rule_id", "rule_version", "executed_at", "confidence"],
+      "properties": {
+        "before_value": {},
+        "after_value": {},
+        "rule_id": { "type": "string", "format": "uuid" },
+        "rule_version": { "type": "integer", "minimum": 1 },
+        "executed_at": { "type": "string", "format": "date-time" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/decision/decision-record.schema.json",
+  "title": "Decision Record 决策记录语义契约",
+  "description": "AEOS 决策记录契约（V1.1 第九节；对账导出自 EDP decision 模块 B.5 现状，未反向改代码语义）。EDP 只存决策事实；规则/审批/Guard 归 M01/DEH。",
+  "type": "object",
+  "required": ["decision_id", "case_id", "chosen_option", "decided_by", "decision_time"],
+  "properties": {
+    "decision_id": { "type": "string", "format": "uuid" },
+    "case_id": { "type": "string", "format": "uuid", "description": "归属决策案例（decision.cases）" },
+    "chosen_option": { "type": "string", "description": "选定选项 key" },
+    "decision_type": { "type": "string", "enum": ["HUMAN", "AI_SUGGESTED"], "description": "Human-Only：正式决策记录仅 HUMAN" },
+    "decided_by": { "type": "string", "description": "决策人" },
+    "decision_time": { "type": "string", "format": "date-time" },
+    "comment": { "type": ["string", "null"] },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "案例级证据引用（case 经 evidence links ref_type=CASE）"
+    },
+    "result_refs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "关联经营结果（V1.2 T18 新增列 result_refs）"
+    },
+    "trace_id": { "type": ["string", "null"], "format": "uuid", "description": "产生本决策的 Trace" }
+  },
+  "additionalProperties": true
+}

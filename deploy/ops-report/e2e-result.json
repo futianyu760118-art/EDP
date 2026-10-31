@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-09-22",
+  "closed_loop": {
+    "passed": true,
+    "rounds": 3,
+    "note": "本地真栈 3 轮全绿（T10，8.7s/7.2s/7.4s）；CI e2e.yml 待 push 后验证"
+  },
+  "tenant_isolation": {
+    "passed": true,
+    "rounds": 3,
+    "api_assertions": 5,
+    "ui_assertions": 3,
+    "note": "A/B 租户 403/404/空列表矩阵 + UI 不渲染（T10 本地 3 轮全绿）"
+  },
+  "visual": {
+    "passed": true,
+    "win32": 52,
+    "linux": 52,
+    "note": "组件 34 story + 页面 18 路由双层基线（T11，两平台各 52）"
+  }
+}

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据质量</title>
+    <style id="theme-vars">
+:root {
+  --edp-background: #f7f8fc;
+  --edp-foreground: #172033;
+  --edp-card: #ffffff;
+  --edp-card-foreground: #172033;
+  --edp-popover: #ffffff;
+  --edp-popover-foreground: #172033;
+  --edp-primary: #5b5ce2;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #ececff;
+  --edp-primary-100: #dcdcff;
+  --edp-primary-200: #c6c7ed;
+  --edp-muted: #f3f4f7;
+  --edp-muted-foreground: #788298;
+  --edp-border: #e8ebf2;
+  --edp-input: #e8ebf2;
+  --edp-ring: #5b5ce2;
+  --edp-radius-small: 4px;
+  --edp-radius-medium: 8px;
+  --edp-radius-large: 12px;
+  --edp-radius-full: 9999px;
+
+  --edp-state-success: #12a47d;
+  --edp-state-success-bg: #e9fbf4;
+  --edp-state-warning: #d97706;
+  --edp-state-warning-bg: #fff7e8;
+  --edp-state-error: #df4f5f;
+  --edp-state-error-bg: #fff0f2;
+  --edp-state-info: #3b82f6;
+  --edp-state-info-bg: #edf5ff;
+
+  --edp-surface-2: #fbfcff;
+  --edp-ink-2: #68738a;
+  --edp-ink-3: #969fb1;
+
+  --edp-shadow-1: 0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.03);
+  --edp-shadow-2: 0 8px 24px -8px rgba(15,23,42,.12);
+  --edp-shadow-3: 0 24px 60px -20px rgba(15,23,42,.18);
+}
+
+.dark {
+  --edp-background: #0b0c14;
+  --edp-foreground: #e8ebf2;
+  --edp-card: #131520;
+  --edp-card-foreground: #e8ebf2;
+  --edp-popover: #131520;
+  --edp-popover-foreground: #e8ebf2;
+  --edp-primary: #7b7cf0;
+  --edp-primary-foreground: #ffffff;
+  --edp-primary-50: #1e1f3a;
+  --edp-primary-100: #2a2b4d;
+  --edp-primary-200: #3d3e6a;
+  --edp-muted: #1c1e2c;
+  --edp-muted-foreground: #9aa1af;
+  --edp-border: #2a2d3d;
+  --edp-input: #2a2d3d;
+  --edp-ring: #7b7cf0;
+  --edp-surface-2: #181a28;
+  --edp-ink-2: #9aa1af;
+  --edp-ink-3: #6b7280;
+}
+
+.edp-font-sans {
+  font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+.edp-font-mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Noto Sans SC Mono", monospace;
+}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--edp-background);
+    --color-foreground: var(--edp-foreground);
+    --color-card: var(--edp-card);
+    --color-card-foreground: var(--edp-card-foreground);
+    --color-popover: var(--edp-popover);
+    --color-popover-foreground: var(--edp-popover-foreground);
+    --color-primary: var(--edp-primary);
+    --color-primary-foreground: var(--edp-primary-foreground);
+    --color-muted: var(--edp-muted);
+    --color-muted-foreground: var(--edp-muted-foreground);
+    --color-border: var(--edp-border);
+    --color-input: var(--edp-input);
+    --color-ring: var(--edp-ring);
+    --radius-sm: var(--edp-radius-small);
+    --radius-md: var(--edp-radius-medium);
+    --radius-lg: var(--edp-radius-large);
+  }
+  @layer base {
+    body { background: var(--edp-background); color: var(--edp-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--edp-background); }
+      .text-background { color: var(--edp-background); }
+      .border-background { border-color: var(--edp-background); }
+      .ring-background { --tw-ring-color: var(--edp-background); }
+      .bg-foreground { background-color: var(--edp-foreground); }
+      .text-foreground { color: var(--edp-foreground); }
+      .border-foreground { border-color: var(--edp-foreground); }
+      .ring-foreground { --tw-ring-color: var(--edp-foreground); }
+      .bg-card { background-color: var(--edp-card); }
+      .text-card { color: var(--edp-card); }
+      .border-card { border-color: var(--edp-card); }
+      .ring-card { --tw-ring-color: var(--edp-card); }
+      .bg-card-foreground { background-color: var(--edp-card-foreground); }
+      .text-card-foreground { color: var(--edp-card-foreground); }
+      .border-card-foreground { border-color: var(--edp-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--edp-card-foreground); }
+      .bg-popover { background-color: var(--edp-popover); }
+      .text-popover { color: var(--edp-popover); }
+      .border-popover { border-color: var(--edp-popover); }
+      .ring-popover { --tw-ring-color: var(--edp-popover); }
+      .bg-popover-foreground { background-color: var(--edp-popover-foreground); }
+      .text-popover-foreground { color: var(--edp-popover-foreground); }
+      .border-popover-foreground { border-color: var(--edp-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--edp-popover-foreground); }
+      .bg-primary { background-color: var(--edp-primary); }
+      .text-primary { color: var(--edp-primary); }
+      .border-primary { border-color: var(--edp-primary); }
+      .ring-primary { --tw-ring-color: var(--edp-primary); }
+      .bg-primary-foreground { background-color: var(--edp-primary-foreground); }
+      .text-primary-foreground { color: var(--edp-primary-foreground); }
+      .border-primary-foreground { border-color: var(--edp-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--edp-primary-foreground); }
+      .bg-muted { background-color: var(--edp-muted); }
+      .text-muted { color: var(--edp-muted); }
+      .border-muted { border-color: var(--edp-muted); }
+      .ring-muted { --tw-ring-color: var(--edp-muted); }
+      .bg-muted-foreground { background-color: var(--edp-muted-foreground); }
+      .text-muted-foreground { color: var(--edp-muted-foreground); }
+      .border-muted-foreground { border-color: var(--edp-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--edp-muted-foreground); }
+      .bg-border { background-color: var(--edp-border); }
+      .text-border { color: var(--edp-border); }
+      .border-border { border-color: var(--edp-border); }
+      .ring-border { --tw-ring-color: var(--edp-border); }
+      .bg-input { background-color: var(--edp-input); }
+      .text-input { color: var(--edp-input); }
+      .border-input { border-color: var(--edp-input); }
+      .ring-input { --tw-ring-color: var(--edp-input); }
+      .bg-ring { background-color: var(--edp-ring); }
+      .text-ring { color: var(--edp-ring); }
+      .border-ring { border-color: var(--edp-ring); }
+      .ring-ring { --tw-ring-color: var(--edp-ring); }
+      .bg-state-success { background-color: var(--edp-state-success); }
+      .text-state-success { color: var(--edp-state-success); }
+      .bg-state-success-bg { background-color: var(--edp-state-success-bg); }
+      .bg-state-warning { background-color: var(--edp-state-warning); }
+      .text-state-warning { color: var(--edp-state-warning); }
+      .bg-state-warning-bg { background-color: var(--edp-state-warning-bg); }
+      .bg-state-error { background-color: var(--edp-state-error); }
+      .text-state-error { color: var(--edp-state-error); }
+      .bg-state-error-bg { background-color: var(--edp-state-error-bg); }
+      .bg-state-info { background-color: var(--edp-state-info); }
+      .text-state-info { color: var(--edp-state-info); }
+      .bg-state-info-bg { background-color: var(--edp-state-info-bg); }
+    </style>
+    <style id="critical-layout">
+      body { margin: 0; font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; background: var(--edp-background); color: var(--edp-foreground); }
+      aside { position: fixed; left: 0; top: 0; bottom: 0; width: 250px; background: var(--edp-card); border-right: 1px solid var(--edp-border); z-index: 20; display: flex; flex-direction: column; }
+      header { position: fixed; top: 0; left: 250px; right: 0; height: 66px; background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--edp-border); z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+      main { margin-left: 250px; padding-top: 66px; min-height: 100vh; }
+      .page-content { padding: 24px; }
+      .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+      .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two-column { grid-template-columns: 1fr; } }
+      @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr; } aside { display: none; } header { left: 0; } main { margin-left: 0; } }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--edp-border); }
+      .nav-item.active { background: var(--edp-primary-50); color: var(--edp-primary); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+
+<aside class="fixed left-0 top-0 bottom-0 w-[250px] bg-card border-r border-border z-20 flex flex-col">
+  <div class="h-[70px] flex items-center px-4 border-b border-border">
+    <div class="w-9 h-9 rounded-lg bg-primary text-primary-foreground grid place-items-center font-extrabold text-lg shadow-sm">E</div>
+    <div class="ml-2.5">
+      <b class="text-sm">AEOS EDP</b>
+      <span class="block text-[10px] text-muted-foreground">Evidence Data Platform</span>
+    </div>
+  </div>
+  <div class="p-3.5">
+    <button class="w-full border border-border bg-card rounded-xl p-2.5 flex items-center gap-2 hover:bg-muted transition-colors" data-dom-id="tenant-switch">
+      <div class="w-7 h-7 rounded-lg bg-primary-50 text-primary grid place-items-center text-xs font-extrabold">AC</div>
+      <div class="min-w-0 flex-1 text-left">
+        <b class="text-xs block truncate">ACME · 华东事业群</b>
+        <span class="text-[10px] text-muted-foreground block truncate">Enterprise · 生产环境</span>
+      </div>
+      <i data-lucide="chevron-down" class="w-4 h-4 text-muted-foreground"></i>
+    </button>
+  </div>
+  <nav class="flex-1 px-2.5 py-2 overflow-y-auto">
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-overview" data-nav="overview">
+      <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i>
+      <span>运营总览</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">数据工作台</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-objects" data-nav="objects">
+      <i data-lucide="layers" class="w-[18px] h-[18px]"></i>
+      <span>业务对象</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-events" data-nav="events">
+      <i data-lucide="zap" class="w-[18px] h-[18px]"></i>
+      <span>事件流</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-evidence" data-nav="evidence">
+      <i data-lucide="shield-check" class="w-[18px] h-[18px]"></i>
+      <span>证据库</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">运维监控</div>
+    <button class="nav-item active w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-quality" data-nav="quality" data-active="true">
+      <i data-lucide="triangle-alert" class="w-[18px] h-[18px]"></i>
+      <span>数据质量</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-governance" data-nav="governance">
+      <i data-lucide="scroll-text" class="w-[18px] h-[18px]"></i>
+      <span>审计日志</span>
+    </button>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-systems" data-nav="systems">
+      <i data-lucide="plug" class="w-[18px] h-[18px]"></i>
+      <span>适配器管理</span>
+    </button>
+    <div class="px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">平台配置</div>
+    <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium text-left" data-dom-id="nav-tenants" data-nav="tenants">
+      <i data-lucide="building-2" class="w-[18px] h-[18px]"></i>
+      <span>租户管理</span>
+    </button>
+  </nav>
+  <div class="p-3.5 border-t border-border">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-full bg-primary-50 text-primary grid place-items-center text-[11px] font-extrabold">YL</div>
+      <div class="flex-1 min-w-0">
+        <b class="text-xs block truncate">Y. Liu</b>
+        <span class="text-[10px] text-muted-foreground block truncate">Workspace Admin</span>
+      </div>
+      <button class="w-8 h-8 rounded-lg border border-border bg-card grid place-items-center text-muted-foreground hover:bg-muted" data-dom-id="settings-btn">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<header class="fixed top-0 left-[250px] right-0 h-[66px] bg-card/92 backdrop-blur border-b border-border z-10 flex items-center justify-between px-6">
+  <div class="flex items-center gap-4">
+    <div class="text-xs text-muted-foreground">EDP / <b class="text-foreground font-semibold" data-slot="crumb">数据质量</b></div>
+    <div class="relative hidden md:block">
+      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"></i>
+      <input type="text" placeholder="搜索对象、事件、证据…" class="h-9 w-[330px] pl-9 pr-3 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent" data-dom-id="global-search" />
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <button class="h-9 px-2.5 border border-border bg-card rounded-lg text-muted-foreground hover:bg-muted flex items-center gap-1.5" data-dom-id="notifications-btn">
+      <i data-lucide="bell" class="w-4 h-4"></i>
+      <span class="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">3</span>
+    </button>
+    <button class="h-9 px-3 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-1.5" data-dom-id="command-palette">
+      <i data-lucide="command" class="w-4 h-4"></i>
+      <span>K</span>
+    </button>
+    <button class="h-9 px-2.5 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-2">
+      <div class="w-6 h-6 rounded-full bg-primary-50 text-primary grid place-items-center text-[9px] font-extrabold">YL</div>
+      <span>Y. Liu</span>
+      <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+    </button>
+  </div>
+</header>
+
+<main class="ml-[250px] pt-[66px] min-h-screen">
+  <div class="page-content">
+
+    <section class="mb-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 class="text-xl font-semibold text-foreground">数据质量</h1>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="h-9 px-3 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center gap-1.5">
+            <i data-lucide="filter" class="w-4 h-4"></i>
+            <span>查看异常</span>
+          </button>
+          <button class="h-9 px-3 bg-primary text-primary-foreground rounded-lg text-xs hover:opacity-90 flex items-center gap-1.5" data-dom-id="quality-recheck">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            <span>重新检查</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="kpi-grid mb-6">
+      <div class="bg-card border border-border rounded-lg p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] uppercase tracking-wider text-muted-foreground">综合质量</span>
+          <i data-lucide="shield-check" class="w-4 h-4 text-primary"></i>
+        </div>
+        <div class="text-2xl font-bold text-foreground mt-2">97.8%</div>
+        <div class="text-[10px] text-muted-foreground mt-1">全维度加权得分</div>
+      </div>
+      <div class="bg-card border border-border rounded-lg p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] uppercase tracking-wider text-muted-foreground">时效性 SLA</span>
+          <i data-lucide="zap" class="w-4 h-4 text-primary"></i>
+        </div>
+        <div class="text-2xl font-bold text-foreground mt-2">97.2%</div>
+        <div class="text-[10px] text-muted-foreground mt-1">近 24 小时同步窗口</div>
+      </div>
+      <div class="bg-card border border-border rounded-lg p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] uppercase tracking-wider text-muted-foreground">完整性</span>
+          <i data-lucide="layers" class="w-4 h-4 text-primary"></i>
+        </div>
+        <div class="text-2xl font-bold text-foreground mt-2">99.1%</div>
+        <div class="text-[10px] text-muted-foreground mt-1">必填字段填充率</div>
+      </div>
+      <div class="bg-card border border-border rounded-lg p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] uppercase tracking-wider text-muted-foreground">待处理异常</span>
+          <i data-lucide="triangle-alert" class="w-4 h-4 text-state-error"></i>
+        </div>
+        <div class="text-2xl font-bold text-foreground mt-2">8</div>
+        <div class="text-[10px] text-muted-foreground mt-1">其中 2 项高优先级</div>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <div class="bg-card border border-border rounded-lg flex flex-col">
+        <div class="px-4 py-3 border-b border-border flex items-center justify-between">
+          <span class="text-[10px] text-muted-foreground">5 个维度 · 实时评分</span>
+        </div>
+        <div class="p-4 space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-foreground">ERP-S4 · 订单</span>
+              <span class="text-xs font-medium text-foreground">98.7%</span>
+            </div>
+            <div class="h-2 bg-muted rounded-full overflow-hidden">
+              <div class="h-full bg-primary rounded-full" style="width: 98.7%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-foreground">WMS · 库存</span>
+              <span class="text-xs font-medium text-foreground">99.5%</span>
+            </div>
+            <div class="h-2 bg-muted rounded-full overflow-hidden">
+              <div class="h-full bg-primary rounded-full" style="width: 99.5%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-foreground">PLM · 产品就绪度</span>
+              <span class="text-xs font-medium text-foreground">96.2%</span>
+            </div>
+            <div class="h-2 bg-muted rounded-full overflow-hidden">
+              <div class="h-full bg-primary rounded-full" style="width: 96.2%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-foreground">MDM · 客户</span>
+              <span class="text-xs font-medium text-foreground">94.8%</span>
+            </div>
+            <div class="h-2 bg-muted rounded-full overflow-hidden">
+              <div class="h-full bg-state-warning rounded-full" style="width: 94.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-foreground">PROCURE-X · 采购订单</span>
+              <span class="text-xs font-medium text-foreground">97.1%</span>
+            </div>
+            <div class="h-2 bg-muted rounded-full overflow-hidden">
+              <div class="h-full bg-primary rounded-full" style="width: 97.1%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-card border border-border rounded-lg flex flex-col">
+        <div class="px-4 py-3 border-b border-border flex items-center justify-end">
+          <button class="text-[10px] text-primary hover:underline flex items-center gap-1">
+            <span>全部异常</span>
+            <i data-lucide="arrow-right" class="w-3 h-3"></i>
+          </button>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-medium text-foreground">主数据 ID 冲突</span>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-state-error-bg text-state-error font-medium">高</span>
+                </div>
+                <div class="text-[10px] text-muted-foreground mt-1">CUST-771 · ERP / MDM 映射不一致</div>
+              </div>
+              <button class="h-7 px-2 border border-border bg-card rounded-md text-[10px] text-muted-foreground hover:bg-muted flex items-center gap-1 shrink-0">
+                <span>处理</span>
+              </button>
+            </div>
+          </div>
+          <div class="border border-border rounded-lg p-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-medium text-foreground">采购时效违规</span>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-state-warning-bg text-state-warning font-medium">中</span>
+                </div>
+                <div class="text-[10px] text-muted-foreground mt-1">PO-38117 · 最近同步延迟 11 分钟</div>
+              </div>
+              <button class="h-7 px-2 border border-border bg-card rounded-md text-[10px] text-muted-foreground hover:bg-muted flex items-center gap-1 shrink-0">
+                <span>处理</span>
+              </button>
+            </div>
+          </div>
+          <div class="border border-dashed border-border rounded-lg p-4 text-center">
+            <p class="text-xs text-muted-foreground">剩余 6 项异常已合并为低优先级队列</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-8 pt-4 border-t border-border">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[10px] text-muted-foreground">
+        <span>AEOS EDP · 证据数据平台</span>
+        <div class="flex items-center gap-4">
+          <a href="#" class="hover:text-foreground">帮助中心</a>
+          <a href="#" class="hover:text-foreground">服务状态</a>
+          <a href="#" class="hover:text-foreground">隐私协议</a>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+</main>
+
+<div id="quality-recheck-modal" class="fixed inset-0 z-50 flex items-center justify-center" aria-modal="true" role="dialog">
+  <div class="absolute inset-0 bg-[rgba(23,32,51,0.45)] backdrop-blur-[2px]"></div>
+  <div class="relative w-full max-w-[480px] mx-4 bg-card border border-border rounded-lg shadow-3 p-6">
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary grid place-items-center">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </div>
+        <h2 class="text-lg font-semibold text-foreground">重新校验数据质量</h2>
+      </div>
+      <button type="button" class="w-7 h-7 rounded-md border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground grid place-items-center transition-colors focus:outline-none focus:ring-2 focus:ring-ring" data-dom-id="modal-close" aria-label="关闭">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div class="space-y-5">
+      <div>
+        <label class="block text-xs font-medium text-foreground mb-3">校验维度</label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="flex items-center gap-2.5 p-3 border border-border rounded-lg bg-card hover:bg-muted cursor-pointer transition-colors">
+            <input type="checkbox" name="dimension" value="completeness" checked class="w-4 h-4 rounded border-border text-primary focus:ring-ring" />
+            <span class="text-xs text-foreground">完整性</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-3 border border-border rounded-lg bg-card hover:bg-muted cursor-pointer transition-colors">
+            <input type="checkbox" name="dimension" value="consistency" checked class="w-4 h-4 rounded border-border text-primary focus:ring-ring" />
+            <span class="text-xs text-foreground">一致性</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-3 border border-border rounded-lg bg-card hover:bg-muted cursor-pointer transition-colors">
+            <input type="checkbox" name="dimension" value="timeliness" checked class="w-4 h-4 rounded border-border text-primary focus:ring-ring" />
+            <span class="text-xs text-foreground">时效性</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-3 border border-border rounded-lg bg-card hover:bg-muted cursor-pointer transition-colors">
+            <input type="checkbox" name="dimension" value="uniqueness" checked class="w-4 h-4 rounded border-border text-primary focus:ring-ring" />
+            <span class="text-xs text-foreground">唯一性</span>
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-foreground mb-3">校验范围</label>
+        <div class="flex items-center gap-4 p-3 border border-border rounded-lg bg-muted/50">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="scope" value="all" checked class="w-4 h-4 border-border text-primary focus:ring-ring" />
+            <span class="text-xs text-foreground">全部对象</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="scope" value="abnormal" class="w-4 h-4 border-border text-primary focus:ring-ring" />
+            <span class="text-xs text-foreground">仅异常对象</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-2 p-3 rounded-lg bg-state-info-bg border border-state-info/10">
+        <i data-lucide="info" class="w-4 h-4 text-state-info shrink-0 mt-0.5"></i>
+        <p class="text-[11px] text-foreground leading-relaxed">校验完成后，系统将通过消息中心通知你结果，并自动更新质量评分与异常列表。</p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-border">
+      <button type="button" class="h-9 px-4 border border-border bg-card rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring" data-dom-id="recheck-cancel">取消</button>
+      <button type="button" class="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-xs hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-ring flex items-center gap-1.5" data-dom-id="recheck-submit">
+        <i data-lucide="play" class="w-3.5 h-3.5"></i>
+        <span>开始校验</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

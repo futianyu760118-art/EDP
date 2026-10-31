@@ -1,0 +1,330 @@
+{
+  "generated_at": "2026-09-22T09:36:33+00:00",
+  "sources": {
+    "db": "platform（migrator/BYPASSRLS）",
+    "loadtest": "deploy\\loadtest\\locust.json",
+    "drills": "deploy\\drills\\drill-records.json",
+    "e2e_result": "deploy\\ops-report\\e2e-result.json"
+  },
+  "metrics": [
+    {
+      "key": "coverage",
+      "name": "业务对象覆盖度",
+      "threshold": "≥95%",
+      "measured": "100.0%",
+      "passed": true,
+      "note": "quality build_coverage（平台全量）"
+    },
+    {
+      "key": "traceability",
+      "name": "证据可追溯率（P0/P1）",
+      "threshold": "=100%",
+      "measured": "100.0%（4/4）",
+      "passed": true,
+      "note": "证据→事件→对象链路存在性；E2E 脚本①内嵌断言另证"
+    },
+    {
+      "key": "recall",
+      "name": "重大风险召回率",
+      "threshold": "≥80%（误报 ≤20%）",
+      "measured": "召回 100.0%（4/4），误报 0.0%（0/4）",
+      "passed": true,
+      "note": "十场景回放统计（放大实体排除）"
+    },
+    {
+      "key": "closure",
+      "name": "Action 闭环率",
+      "threshold": "≥90%",
+      "measured": "100.0%（1/1）",
+      "passed": true,
+      "note": "action.actions status=VERIFIED 口径"
+    },
+    {
+      "key": "guard_denied",
+      "name": "AI 越权执行",
+      "threshold": "=0",
+      "measured": "越权成功 0；GUARD_DENIED 拦截 3 条（全量导出）",
+      "passed": true,
+      "note": "越权矩阵用例集（test_security_matrix）CI 佐证"
+    },
+    {
+      "key": "audit_completeness",
+      "name": "Action 审计完整率",
+      "threshold": "=100%",
+      "measured": "100.0%（action 1/1、case 1/1、record 1/1）",
+      "passed": true,
+      "note": "实体级审计行存在性对账"
+    },
+    {
+      "key": "latency",
+      "name": "接口响应（P95）",
+      "threshold": "<2s",
+      "measured": "max P95 1100ms（9 接口）",
+      "passed": true,
+      "note": "locust 三档 VU 实测（deploy/loadtest/locust.json）"
+    },
+    {
+      "key": "isolation",
+      "name": "租户隔离",
+      "threshold": "100% 拒绝",
+      "measured": "E2E 闭环 3 轮 + 隔离 3 轮全绿",
+      "passed": true,
+      "note": "跨租户用例集 + E2E tenant-isolation.spec.ts"
+    },
+    {
+      "key": "ha",
+      "name": "高可用/备份恢复",
+      "threshold": "RTO<5min；演练通过",
+      "measured": "switchover RTO=0s/SUCCEEDED；pitr RTO=22.1s/SUCCEEDED；tenant_restore RTO=23.8s/SUCCEEDED",
+      "passed": true,
+      "note": "W5 演练实测（drill-records.json）"
+    }
+  ],
+  "all_passed": true,
+  "details": {
+    "coverage_by_type": [
+      {
+        "object_type": "BOM",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "CAPACITY",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "CUSTOMER",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "INVENTORY",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "MATERIAL",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "ORDER",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "PRODUCT",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "PROJECT",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "PURCHASE_ORDER",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "SUPPLIER",
+        "coverage_pct": 100.0
+      },
+      {
+        "object_type": "SUPPLIER_LEAD_TIME",
+        "coverage_pct": 100.0
+      }
+    ],
+    "recall": {
+      "expected_major": 4,
+      "detected_major": 4,
+      "matched": 4,
+      "recall_pct": 100.0,
+      "false_positives": 0,
+      "false_positive_pct": 0.0,
+      "false_positive_sample": []
+    },
+    "traceability": {
+      "total": 4,
+      "traced": 4,
+      "pct": 100.0
+    },
+    "closure": {
+      "total": 1,
+      "verified": 1,
+      "pct": 100.0
+    },
+    "audit_completeness": {
+      "covered_actions": 1,
+      "total_actions": 1,
+      "covered_cases": 1,
+      "total_cases": 1,
+      "covered_records": 1,
+      "total_records": 1,
+      "pct": 100.0
+    },
+    "guard_denied": {
+      "denied_count": 3,
+      "export": [
+        {
+          "audit_id": 1449,
+          "occurred_at": "2026-09-17T18:57:37.401936+00:00",
+          "tenant_id": "6753c341-6d8d-55ed-92e8-6107eb3025d5",
+          "actor_type": "SERVICE",
+          "actor_id": "agent-hub",
+          "resource_type": "action.actions",
+          "resource_id": "96aef52e-e719-45ec-9442-be0697734e14",
+          "detail": {
+            "path": "/api/v1/actions/96aef52e-e719-45ec-9442-be0697734e14/status",
+            "reason": "Human-Only",
+            "scopes": [
+              "readonly",
+              "write:event",
+              "write:registry",
+              "write:decision",
+              "write:trace",
+              "write:memory",
+              "write:action"
+            ]
+          }
+        },
+        {
+          "audit_id": 1440,
+          "occurred_at": "2026-09-17T18:57:00.469733+00:00",
+          "tenant_id": "6753c341-6d8d-55ed-92e8-6107eb3025d5",
+          "actor_type": "SERVICE",
+          "actor_id": "agent-hub",
+          "resource_type": "decision.records",
+          "resource_id": "e357f634-48a2-4a1c-baa8-2344a2cdbbc6",
+          "detail": {
+            "path": "/api/v1/decisions/cases/e357f634-48a2-4a1c-baa8-2344a2cdbbc6/records",
+            "reason": "Human-Only",
+            "scopes": [
+              "readonly",
+              "write:event",
+              "write:registry",
+              "write:decision",
+              "write:trace",
+              "write:memory",
+              "write:action"
+            ]
+          }
+        },
+        {
+          "audit_id": 1439,
+          "occurred_at": "2026-09-17T18:56:55.553568+00:00",
+          "tenant_id": "6753c341-6d8d-55ed-92e8-6107eb3025d5",
+          "actor_type": "SERVICE",
+          "actor_id": "agent-hub",
+          "resource_type": "decision.records",
+          "resource_id": "e357f634-48a2-4a1c-baa8-2344a2cdbbc6",
+          "detail": {
+            "path": "/api/v1/decisions/cases/e357f634-48a2-4a1c-baa8-2344a2cdbbc6/records",
+            "reason": "Human-Only",
+            "scopes": [
+              "readonly",
+              "write:event",
+              "write:registry",
+              "write:decision",
+              "write:trace",
+              "write:memory",
+              "write:action"
+            ]
+          }
+        }
+      ],
+      "ai_human_only_success": 0
+    },
+    "loadtest_entries": [
+      {
+        "name": "GET /api/v1/audit-logs?limit=20",
+        "requests": 328,
+        "failures": 2,
+        "p95_ms": 860
+      },
+      {
+        "name": "GET /api/v1/tools/orders?limit=20",
+        "requests": 1508,
+        "failures": 15,
+        "p95_ms": 630
+      },
+      {
+        "name": "POST /api/v1/events/batch",
+        "requests": 296,
+        "failures": 2,
+        "p95_ms": 1000
+      },
+      {
+        "name": "GET /api/v1/admin/quality/coverage",
+        "requests": 336,
+        "failures": 0,
+        "p95_ms": 530
+      },
+      {
+        "name": "GET /api/v1/objects?limit=20",
+        "requests": 2203,
+        "failures": 23,
+        "p95_ms": 680
+      },
+      {
+        "name": "GET /api/v1/health",
+        "requests": 1562,
+        "failures": 19,
+        "p95_ms": 1100
+      },
+      {
+        "name": "GET /api/v1/events?risk_level=P1",
+        "requests": 4502,
+        "failures": 27,
+        "p95_ms": 290
+      },
+      {
+        "name": "GET /api/v1/admin/quality/reports",
+        "requests": 336,
+        "failures": 1,
+        "p95_ms": 990
+      },
+      {
+        "name": "GET /api/v1/decisions/cases/{id}",
+        "requests": 759,
+        "failures": 4,
+        "p95_ms": 750
+      }
+    ],
+    "drills": [
+      {
+        "drill_type": "switchover",
+        "result": "SUCCEEDED",
+        "rto_seconds": 0,
+        "rpo_seconds": 0
+      },
+      {
+        "drill_type": "pitr",
+        "result": "SUCCEEDED",
+        "rto_seconds": 22.1,
+        "rpo_seconds": 0
+      },
+      {
+        "drill_type": "tenant_restore",
+        "result": "SUCCEEDED",
+        "rto_seconds": 23.8,
+        "rpo_seconds": 0
+      }
+    ],
+    "e2e": {
+      "available": true,
+      "generated_at": "2026-09-22",
+      "closed_loop": {
+        "passed": true,
+        "rounds": 3,
+        "note": "本地真栈 3 轮全绿（T10，8.7s/7.2s/7.4s）；CI e2e.yml 待 push 后验证"
+      },
+      "tenant_isolation": {
+        "passed": true,
+        "rounds": 3,
+        "api_assertions": 5,
+        "ui_assertions": 3,
+        "note": "A/B 租户 403/404/空列表矩阵 + UI 不渲染（T10 本地 3 轮全绿）"
+      },
+      "visual": {
+        "passed": true,
+        "win32": 52,
+        "linux": 52,
+        "note": "组件 34 story + 页面 18 路由双层基线（T11，两平台各 52）"
+      }
+    }
+  }
+}
