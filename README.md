@@ -60,7 +60,7 @@ docker compose -f deploy/docker-compose.dev.yml -f deploy/docker-compose.realtim
 | 管理员 | `admin` / `Admin@123!` | 平台管理员（is_platform_admin），租户 `default` |
 | 演示用户 | `manager1` / `Admin@123!` | MANAGER 角色 |
 | 演示用户 | `analyst1` / `Admin@123!` | ANALYST 角色 |
-| API Key | `X-API-Key: edp-dev-agent-hub-key` | 服务主体 `agent-hub`，scopes：readonly / write:event / write:registry |
+| API Key | `X-API-Key: edp-dev-agent-hub-key` | 服务主体 `agent-hub`，scopes：readonly / write:event / write:registry / write:lead |
 
 ### 常用端口
 
