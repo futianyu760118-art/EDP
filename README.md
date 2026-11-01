@@ -120,6 +120,8 @@ deploy/                   docker-compose.dev.yml（+ 本地端口 override）、
 
 `POST /api/v1/public/lead-intake` 仅供 Public BFF 使用，必须携带 EDP API Key，且该服务主体仅授予当前租户的 `write:lead` scope。请求体按 `LeadIntakeV1` 严格校验；认证租户覆盖并校验请求中的 `tenant_id`，重复的 `(tenant_id, idempotency_key)` 只保留一条 `event.lead_intakes`，并与 `lead.intake.received` Outbox 同事务提交。该路径不对官网直接开放。
 
+Worker 配置 `EDP_CRM_LEAD_TARGET_URL` 和 `EDP_CRM_LEAD_TARGET_TOKEN` 后，才注册 CRM Lead 订阅者；服务令牌缺失会拒绝启动。订阅者只消费 `lead.intake.received`，沿用 Inbox 幂等，并以 `X-Idempotency-Key` 投递到 CRM 的内部 AEOS 入站端点。
+
 ## W1 交付清单（14 任务对照）
 
 | 任务 | 状态 | 一行摘要 |

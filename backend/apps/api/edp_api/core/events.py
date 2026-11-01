@@ -9,8 +9,13 @@
 （apps/worker/edp_worker/outbox_dispatch.py）从 event.outbox 行构造。
 """
 
+import asyncio
 import json
 import logging
+import os
+import urllib.error
+import urllib.request
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 from uuid import UUID
@@ -78,6 +83,71 @@ class EBMSNotifyStubSubscriber:
                 ensure_ascii=False,
             )
         )
+
+
+class CRMLeadSubscriber:
+    """Deliver LeadIntakeV1 to CRM through its service-authenticated endpoint."""
+
+    consumer_name = "m05-crm-lead"
+
+    def __init__(
+        self,
+        target_url: str,
+        token: str,
+        *,
+        timeout_s: float = 5.0,
+        sender: Callable[[str, dict[str, str], bytes, float], Awaitable[None]] | None = None,
+    ) -> None:
+        if not target_url or not token:
+            raise ValueError("CRM Lead subscriber requires target_url and token")
+        self.target_url = target_url
+        self.token = token
+        self.timeout_s = timeout_s
+        self._sender = sender
+
+    @classmethod
+    def from_env(cls) -> "CRMLeadSubscriber | None":
+        target_url = os.getenv("EDP_CRM_LEAD_TARGET_URL", "").strip()
+        if not target_url:
+            return None
+        token = os.getenv("EDP_CRM_LEAD_TARGET_TOKEN", "").strip()
+        if not token:
+            raise RuntimeError(
+                "EDP_CRM_LEAD_TARGET_URL is set but EDP_CRM_LEAD_TARGET_TOKEN is missing"
+            )
+        return cls(
+            target_url,
+            token,
+            timeout_s=float(os.getenv("EDP_CRM_LEAD_TARGET_TIMEOUT_S", "5")),
+        )
+
+    async def on_event(self, msg: OutboxMessage) -> None:
+        if msg.event_type != "lead.intake.received":
+            return
+        body = json.dumps(msg.payload, ensure_ascii=False).encode("utf-8")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.token}",
+            "X-Contract-Version": "LeadIntakeV1",
+            "X-Idempotency-Key": str(msg.payload.get("idempotency_key", "")),
+        }
+        if self._sender is not None:
+            await self._sender(self.target_url, headers, body, self.timeout_s)
+            return
+        await asyncio.to_thread(self._send_http, headers, body)
+
+    def _send_http(self, headers: dict[str, str], body: bytes) -> None:
+        request = urllib.request.Request(
+            self.target_url, data=body, headers=headers, method="POST"
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_s) as response:
+                if response.status < 200 or response.status >= 300:
+                    raise RuntimeError(f"CRM Lead target returned HTTP {response.status}")
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(f"CRM Lead target returned HTTP {exc.code}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError("CRM Lead target unavailable") from exc
 
 
 # ---- 模块级注册表（组合根装配：main.py / worker main.py 调用 register） ----
