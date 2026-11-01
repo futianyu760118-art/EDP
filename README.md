@@ -12,7 +12,7 @@ flowchart LR
     end
     subgraph 后端
         api["api<br/>FastAPI 模块化单体<br/>auth / registry / events"]
-        worker["worker<br/>Outbox 分发 + admission 预审<br/>+ 实时流消费（V1.3，可选）<br/>+ 主数据兜底（V1.3，可选）<br/>（SKIP LOCKED / 指数退避）"]
+    worker["worker<br/>Outbox 分发 + Inbox 幂等<br/>+ admission 预审<br/>+ 实时流消费（V1.3，可选）<br/>+ 主数据兜底（V1.3，可选）<br/>（SKIP LOCKED / 指数退避）"]
     end
     db[("PostgreSQL 16<br/>15 Schema + RLS")]
     web -- "/api（nginx 反代）" --> api
@@ -97,7 +97,7 @@ web 容器构建时 `VITE_API_BASE` 显式置空 = 同源相对路径，经 ngin
 ```
 backend/                  uv workspace 根
   apps/api/               FastAPI 服务（edp_api：core + modules/{auth,tenantmgmt,platform,registry,events}）
-  apps/worker/            Outbox Worker（edp_worker）
+  apps/worker/            Outbox + Inbox Worker（edp_worker）
   packages/adapters/      源系统适配器基座（edp_adapters）
   migrations/             Alembic（versions/{platform,master,event,misc}，0001~0007）
   tests/{unit,integration}/  pytest（integration = testcontainers 真 PG）
@@ -126,6 +126,7 @@ deploy/                   docker-compose.dev.yml（+ 本地端口 override）、
 | EDP-004 | ✅ | Registry API：upsert（乐观锁 409）、组合键查询、history |
 | EDP-005 | ✅ | Events API：批量入库（UUIDv5 幂等）、Idempotency-Key 重放去重、查询 |
 | EDP-006 | ✅ | Outbox 写侧 + Worker：SKIP LOCKED、指数退避、按租户循环、异常隔离 |
+| AEOS-P1-EDP-INBOX | ✅ | Inbox 消费幂等：租户/消费者/对象修订唯一键、失败重试、已处理跳过 |
 | EDP-007 | ✅ | OpenAPI 导出冻结：contracts/ 快照 + sha256 指纹 + 变更评审流程 |
 | EDP-022 | ✅ | 租户数据模型与 RLS：跨租户隔离矩阵用例进 CI（A 读写 B → 0 行/404/403） |
 | EDP-023 | ✅ | 租户上下文中间件：JWT/API Key 绑定、SET LOCAL、租户状态守卫 |

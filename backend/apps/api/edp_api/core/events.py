@@ -39,6 +39,8 @@ class Subscriber(Protocol):
 class LoggingSubscriber:
     """结构化日志订阅者：json 一行（outbox_id/tenant_id/event_type）。"""
 
+    consumer_name = "edp.logging"
+
     async def on_event(self, msg: OutboxMessage) -> None:
         logger.info(
             json.dumps(
@@ -58,6 +60,8 @@ class EBMSNotifyStubSubscriber:
     W2 将替换为 HTTP 通知 EBMS（异常/缓存失效投递）；接口签名不变，
     worker 仅依赖 ``Subscriber`` 协议。
     """
+
+    consumer_name = "m03-ebms-notify"
 
     def __init__(self) -> None:
         self._logger = logging.getLogger("edp.ebms_notify")
