@@ -34,6 +34,7 @@ from edp_api.modules.lead_intake.router import router as lead_intake_router
 from edp_api.modules.lineage.router import router as lineage_router
 from edp_api.modules.memories.router import router as memories_router
 from edp_api.modules.metric.router import router as metric_router
+from edp_api.modules.person_lifecycle.router import router as person_lifecycle_router
 from edp_api.modules.period.router import router as period_router
 from edp_api.modules.platform.router import router as platform_router
 from edp_api.modules.quality.router import drills_router as quality_drills_router
@@ -143,6 +144,8 @@ def create_app(extra_routers: Sequence[APIRouter] = ()) -> FastAPI:
     app.include_router(result_router)
     # metric 路由（V1.2 Phase 4）：指标口径注册 + 计量值
     app.include_router(metric_router)
+    # AEOS 人员状态同步：M01 签名接收 + 目标状态查询/重试
+    app.include_router(person_lifecycle_router)
     # period 路由（V1.2 Phase 4）：AEOS 经营窗口 + 周期枚举
     app.include_router(period_router)
     # value 路由（V1.2 Phase 4）：价值账本（复用 metric 权限轨道）

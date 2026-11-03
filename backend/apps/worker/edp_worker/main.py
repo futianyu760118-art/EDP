@@ -26,6 +26,7 @@ from edp_api.core.events import (
 from edp_worker.admission_job import admission_loop
 from edp_worker.masterdata_job import MasterdataSettings, masterdata_loop
 from edp_worker.outbox_dispatch import run_forever
+from edp_worker.person_lifecycle_delivery import person_lifecycle_loop
 from edp_worker.stream_consume import StreamSettings, stream_loop
 
 logger = logging.getLogger("edp.worker")
@@ -58,6 +59,7 @@ async def _work() -> None:
     tasks = [
         run_forever(engine, list(subscribers)),
         admission_loop(engine),
+        person_lifecycle_loop(engine),
     ]
     if stream_settings is not None:
         logger.info(
