@@ -7156,6 +7156,11 @@
             "title": "Deliveries",
             "type": "array"
           },
+          "duplicate": {
+            "default": false,
+            "title": "Duplicate",
+            "type": "boolean"
+          },
           "effective_at": {
             "format": "date-time",
             "title": "Effective At",
@@ -9664,6 +9669,7 @@
             "type": "integer"
           },
           "pool_share": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Pool Share",
             "type": "string"
           },
@@ -9721,6 +9727,7 @@
             "type": "integer"
           },
           "pool_share": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Pool Share",
             "type": "string"
           },
@@ -10641,6 +10648,7 @@
             "type": "integer"
           },
           "storage_gb": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Storage Gb",
             "type": "string"
           },
@@ -18167,6 +18175,50 @@
         "summary": "周期类型枚举（含边界说明）",
         "tags": [
           "periods"
+        ]
+      }
+    },
+    "/api/v1/person-lifecycle/admin/events/{event_id}/summary": {
+      "get": {
+        "operationId": "lifecycle_summary_api_v1_person_lifecycle_admin_events__event_id__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Lifecycle Summary Api V1 Person Lifecycle Admin Events  Event Id  Summary Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lifecycle Summary",
+        "tags": [
+          "person-lifecycle-admin"
         ]
       }
     },
