@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 logger = logging.getLogger("edp.worker.person_lifecycle")
 
+ALLOWED_TARGET_STATUSES = {"synced", "skipped", "pending_confirmation", "retrying", "failed"}
+
 
 def _post_json(url: str, headers: dict[str, str], body: bytes, timeout: float) -> tuple[int, dict | None]:
     request = urllib.request.Request(url, data=body, headers=headers, method="POST")
@@ -67,10 +69,22 @@ async def deliver_once(engine: AsyncEngine, tenant_id: UUID, *, batch_size: int 
                 )
                 if 200 <= status_code < 300:
                     result_status = str((response or {}).get("status") or "synced").lower()
-                    if result_status not in {"synced", "skipped", "pending_confirmation"}:
-                        result_status = "synced"
-                    await service.mark_delivery_success(sess, row, result_status, response)
-                    stats["synced"] += 1
+                    if result_status not in ALLOWED_TARGET_STATUSES:
+                        await service.mark_delivery_failure(
+                            sess, row, f"目标系统返回了无法识别的处理状态：{result_status or '空状态'}",
+                            settings.outbox_max_retries, settings.outbox_backoff_base_seconds,
+                        )
+                        stats["dlq" if row.status == "DLQ" else "retried"] += 1
+                    elif result_status in {"failed", "retrying"}:
+                        reason = str((response or {}).get("reason") or "目标系统未完成办理")
+                        await service.mark_delivery_failure(
+                            sess, row, reason,
+                            settings.outbox_max_retries, settings.outbox_backoff_base_seconds,
+                        )
+                        stats["dlq" if row.status == "DLQ" else "retried"] += 1
+                    else:
+                        await service.mark_delivery_success(sess, row, result_status, response)
+                        stats["synced"] += 1
                 else:
                     await service.mark_delivery_failure(sess, row, f"目标系统返回 HTTP {status_code}", settings.outbox_max_retries, settings.outbox_backoff_base_seconds)
                     stats["dlq" if row.status == "DLQ" else "retried"] += 1
