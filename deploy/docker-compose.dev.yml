@@ -36,6 +36,10 @@ services:
     environment:
       EDP_DATABASE_URL: postgresql+asyncpg://edp_app:edp_app@db:5432/edp
       EDP_JWT_SECRET: dev-secret
+      # 可选：配置后启用 lead.intake.received → CRM 投递；目标 URL 已配置但令牌缺失时 Worker 拒绝启动
+      EDP_CRM_LEAD_TARGET_URL: ${EDP_CRM_LEAD_TARGET_URL:-}
+      EDP_CRM_LEAD_TARGET_TOKEN: ${EDP_CRM_LEAD_TARGET_TOKEN:-}
+      EDP_CRM_LEAD_TARGET_TIMEOUT_S: ${EDP_CRM_LEAD_TARGET_TIMEOUT_S:-5}
       # 演练记录 JSON 供给（W5 终审 I-1）：GET /admin/drills 读此路径
       EDP_DRILLS_FILE: /workspace/deploy/drills/drill-records.json
     command: ["uvicorn", "edp_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

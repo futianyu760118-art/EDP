@@ -26,14 +26,70 @@ from uuid import UUID
 from edp_api.core.config import get_settings
 from edp_api.core.db import bind_tenant
 from edp_api.core.events import OutboxMessage, Subscriber
+from edp_api.core.inbox import build_inbox_key
 from edp_api.modules.events import service as events_service
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from edp_worker.scheduler import active_tenant_ids
 
 logger = logging.getLogger("edp.worker.outbox")
 
 DEFAULT_BATCH_SIZE = 100
+
+
+def _consumer_name(subscriber: Subscriber) -> str:
+    configured = getattr(subscriber, "consumer_name", None)
+    if configured:
+        return str(configured)
+    cls = type(subscriber)
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
+def _inbox_key_for(subscriber: Subscriber, msg: OutboxMessage):
+    payload = msg.payload or {}
+    raw_revision = payload.get("revision", 1)
+    try:
+        revision = int(raw_revision)
+    except (TypeError, ValueError):
+        revision = 1
+    if revision < 1:
+        revision = 1
+    return build_inbox_key(
+        tenant_id=msg.tenant_id,
+        consumer=_consumer_name(subscriber),
+        source_system=str(payload.get("source_system") or "EDP"),
+        object_type=str(payload.get("object_type") or msg.aggregate_type),
+        object_id=str(payload.get("object_id") or msg.aggregate_id),
+        revision=revision,
+        event_type=msg.event_type,
+    )
+
+
+async def _deliver_to_subscriber(
+    sess: AsyncSession, msg: OutboxMessage, subscriber: Subscriber
+) -> None:
+    """Run one subscriber through Inbox registration and acknowledgement."""
+
+    inbox_key = _inbox_key_for(subscriber, msg)
+    inbox, inserted = await events_service.register_inbox(
+        sess, inbox_key, dict(msg.payload), actor="edp-worker"
+    )
+    if not inserted and inbox.status == "PROCESSED":
+        return
+    try:
+        await subscriber.on_event(msg)
+    except Exception as exc:  # noqa: BLE001 — caller applies outbox retry policy
+        await events_service.mark_inbox_failed(
+            sess,
+            inbox.inbox_id,
+            msg.tenant_id,
+            actor="edp-worker",
+            error=str(exc),
+        )
+        raise
+    await events_service.mark_inbox_processed(
+        sess, inbox.inbox_id, msg.tenant_id, actor="edp-worker"
+    )
 
 
 def _empty_stats() -> dict[str, int]:
@@ -67,7 +123,7 @@ async def dispatch_batch(
             )
             try:
                 for subscriber in subscribers:
-                    await subscriber.on_event(msg)
+                    await _deliver_to_subscriber(sess, msg, subscriber)
             except Exception as exc:  # noqa: BLE001 — nack 即退避，单条隔离
                 outcome = await events_service.record_outbox_result(
                     sess,

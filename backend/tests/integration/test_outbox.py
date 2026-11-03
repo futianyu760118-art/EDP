@@ -7,6 +7,7 @@
 3. 退避数列 available_at-now() ≈ 2^n * 5s（容差 1s）；
 4. 单租户异常隔离：订阅者仅对 default 抛错 → tenant-b 照常 PUBLISHED；
 5. SKIP LOCKED 并发：同租户两个并发 dispatch_batch 不双发。
+6. Inbox 按 consumer + object revision 幂等，已处理的重复投递不再次执行。
 
 引擎形态：dispatch 使用 app_role_engine（edp_app，NOBYPASSRLS）——
 worker 同样受 FORCE RLS 约束，bind_tenant 后才能读写 outbox，测试路径
@@ -89,6 +90,14 @@ async def _clean_outbox_rows(db_session: AsyncSession) -> None:
     """每测试后清场：本模块痕迹（SO-OB-% 对象、idem-ob-% 事件与幂等键、
     ob.% 事件类型、tenant-b-ob 租户及其直插 outbox）。"""
     yield
+    await db_session.execute(
+        text(
+            "DELETE FROM event.inbox WHERE tenant_id IN"
+            " (SELECT tenant_id FROM platform.tenants WHERE slug = 'default')"
+            " OR tenant_id IN"
+            " (SELECT tenant_id FROM platform.tenants WHERE slug = 'tenant-b-ob')"
+        )
+    )
     await db_session.execute(
         text(
             "DELETE FROM event.outbox WHERE aggregate_id IN"
@@ -237,6 +246,17 @@ async def test_dispatch_publishes_all(
     rows = await _outbox_rows(db_session, tenant_id)
     assert {r["status"] for r in rows} == {"PUBLISHED"}
     assert all(r["published_at"] is not None for r in rows)
+    inbox_summary = (
+        await db_session.execute(
+            text(
+                "SELECT count(*) AS total,"
+                " count(*) FILTER (WHERE status = 'PROCESSED') AS processed"
+                " FROM event.inbox WHERE tenant_id = :t"
+            ),
+            {"t": tenant_id},
+        )
+    ).one()
+    assert (inbox_summary.total, inbox_summary.processed) == (8, 8)
 
     # 空转一轮：无 PENDING 可取 → stats 全 0，不误报
     idle = await dispatch_batch(app_role_engine, tenant_id, [recorder])

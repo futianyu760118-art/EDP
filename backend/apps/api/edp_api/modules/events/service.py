@@ -44,10 +44,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from edp_api.core.config import get_settings
 from edp_api.core.errors import EdpError
+from edp_api.core.inbox import InboxKey
 from edp_api.core.pagination import Page, decode_cursor, encode_cursor
 from edp_api.core.security.principal import Principal
 from edp_api.modules.audit import service as audit_service
-from edp_api.modules.events.models import Event, Outbox
+from edp_api.modules.events.models import Event, Inbox, Outbox
 from edp_api.modules.events.schemas import (
     BatchResponse,
     EventBatchError,
@@ -114,6 +115,113 @@ async def append_outbox(
     sess.add(entry)
     await sess.flush()
     return entry
+
+
+async def register_inbox(
+    sess: AsyncSession,
+    key: InboxKey,
+    payload: dict,
+    actor: str,
+) -> tuple[Inbox, bool]:
+    """Register one consumer delivery and report whether it was newly inserted.
+
+    The unique tuple is the only idempotency authority. A duplicate delivery
+    returns the existing row and ``False``; callers must not execute the
+    irreversible business action again.
+    """
+
+    values = {
+        "tenant_id": key.tenant_id,
+        "consumer": key.consumer,
+        "source_system": key.source_system,
+        "object_type": key.object_type,
+        "object_id": key.object_id,
+        "revision": key.revision,
+        "event_type": key.event_type,
+        "payload": payload,
+        "created_by": actor,
+        "updated_by": actor,
+    }
+    stmt = (
+        pg_insert(Inbox)
+        .values(**values)
+        .on_conflict_do_nothing(
+            index_elements=[
+                Inbox.tenant_id,
+                Inbox.consumer,
+                Inbox.source_system,
+                Inbox.object_type,
+                Inbox.object_id,
+                Inbox.revision,
+                Inbox.event_type,
+            ]
+        )
+        .returning(Inbox.inbox_id)
+    )
+    inserted_id = (await sess.execute(stmt)).scalar_one_or_none()
+    if inserted_id is not None:
+        entry = await sess.get(Inbox, inserted_id)
+        assert entry is not None
+        return entry, True
+
+    entry = (
+        await sess.execute(
+            select(Inbox).where(
+                Inbox.tenant_id == key.tenant_id,
+                Inbox.consumer == key.consumer,
+                Inbox.source_system == key.source_system,
+                Inbox.object_type == key.object_type,
+                Inbox.object_id == key.object_id,
+                Inbox.revision == key.revision,
+                Inbox.event_type == key.event_type,
+            )
+        )
+    ).scalar_one()
+    return entry, False
+
+
+async def mark_inbox_processed(
+    sess: AsyncSession,
+    inbox_id: int,
+    tenant_id: UUID,
+    actor: str,
+) -> None:
+    """Ack an Inbox row without allowing a cross-tenant update."""
+
+    await sess.execute(
+        text(
+            "UPDATE event.inbox SET status = 'PROCESSED', "
+            "attempt_count = attempt_count + 1, processed_at = now(), "
+            "last_error = NULL, updated_at = now(), updated_by = :actor "
+            "WHERE inbox_id = :inbox_id AND tenant_id = :tenant_id"
+        ),
+        {"inbox_id": inbox_id, "tenant_id": tenant_id, "actor": actor},
+    )
+
+
+async def mark_inbox_failed(
+    sess: AsyncSession,
+    inbox_id: int,
+    tenant_id: UUID,
+    actor: str,
+    error: str,
+) -> None:
+    """Record a retryable consumer failure in the tenant-scoped Inbox."""
+
+    await sess.execute(
+        text(
+            "UPDATE event.inbox SET status = 'FAILED', "
+            "attempt_count = attempt_count + 1, last_error = :error, "
+            "updated_at = now(), updated_by = :actor "
+            "WHERE inbox_id = :inbox_id AND tenant_id = :tenant_id"
+        ),
+        {
+            "inbox_id": inbox_id,
+            "tenant_id": tenant_id,
+            "actor": actor,
+            "error": error[:4000],
+        },
+    )
 
 
 async def outbox_for_aggregate(

@@ -2,7 +2,7 @@
 
 装配：get_engine（EDP_DATABASE_URL，生产为 edp_app 角色——worker 受
 FORCE RLS 约束，分发前 bind_tenant 见 outbox_dispatch）→ 注册内置订阅者
-（LoggingSubscriber + EBMSNotifyStubSubscriber）→ run_forever 常驻。
+（LoggingSubscriber + EBMSNotifyStubSubscriber + 可选 CRMLeadSubscriber）→ run_forever 常驻。
 
 优雅退出：SIGTERM/SIGINT 置停止事件（Windows ProactorEventLoop 不支持
 add_signal_handler，降级为 KeyboardInterrupt 兜底）；退出前取消循环并
@@ -15,6 +15,7 @@ import signal
 
 from edp_api.core.db import dispose_engine, get_engine
 from edp_api.core.events import (
+    CRMLeadSubscriber,
     EBMSNotifyStubSubscriber,
     LoggingSubscriber,
     clear_subscribers,
@@ -25,6 +26,7 @@ from edp_api.core.events import (
 from edp_worker.admission_job import admission_loop
 from edp_worker.masterdata_job import MasterdataSettings, masterdata_loop
 from edp_worker.outbox_dispatch import run_forever
+from edp_worker.person_lifecycle_delivery import person_lifecycle_loop
 from edp_worker.stream_consume import StreamSettings, stream_loop
 
 logger = logging.getLogger("edp.worker")
@@ -44,6 +46,10 @@ async def _work() -> None:
     clear_subscribers()
     register_subscriber(LoggingSubscriber())
     register_subscriber(EBMSNotifyStubSubscriber())
+    crm_lead = CRMLeadSubscriber.from_env()
+    if crm_lead is not None:
+        register_subscriber(crm_lead)
+        logger.info("CRM Lead subscriber enabled target=%s", crm_lead.target_url)
     logger.info("worker started subscribers=%d", len(subscribers))
     # 并发常驻：outbox 分发 + admission 机器预审调度（V1.2 T32，缺省 60s）
     # + 实时流消费（V1.3 T44，EDP_STREAM_KAFKA_BOOTSTRAP 未配置时不启用）
@@ -53,6 +59,7 @@ async def _work() -> None:
     tasks = [
         run_forever(engine, list(subscribers)),
         admission_loop(engine),
+        person_lifecycle_loop(engine),
     ]
     if stream_settings is not None:
         logger.info(

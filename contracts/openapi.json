@@ -4180,6 +4180,175 @@
         "title": "LastSyncSummary",
         "type": "object"
       },
+      "LeadConsent": {
+        "additionalProperties": false,
+        "properties": {
+          "deletion_requested": {
+            "default": false,
+            "title": "Deletion Requested",
+            "type": "boolean"
+          },
+          "granted": {
+            "const": true,
+            "title": "Granted",
+            "type": "boolean"
+          },
+          "purpose": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Purpose",
+            "type": "string"
+          },
+          "retention_until": {
+            "format": "date-time",
+            "title": "Retention Until",
+            "type": "string"
+          },
+          "version": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "granted",
+          "version",
+          "purpose",
+          "retention_until"
+        ],
+        "title": "LeadConsent",
+        "type": "object"
+      },
+      "LeadContact": {
+        "additionalProperties": false,
+        "properties": {
+          "email_or_phone": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Email Or Phone",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "email_or_phone"
+        ],
+        "title": "LeadContact",
+        "type": "object"
+      },
+      "LeadIntakeIn": {
+        "additionalProperties": false,
+        "description": "AEOS LeadIntakeV1; tenant_id is checked against authenticated context.",
+        "properties": {
+          "consent": {
+            "$ref": "#/components/schemas/LeadConsent"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/LeadContact"
+          },
+          "contract_version": {
+            "const": "LeadIntakeV1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9._:-]{1,160}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "intake_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Intake Id",
+            "type": "string"
+          },
+          "interest": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Interest",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "source_system": {
+            "const": "PUBLIC_BFF",
+            "title": "Source System",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "trace_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "intake_id",
+          "source_system",
+          "submitted_at",
+          "contact",
+          "interest",
+          "consent",
+          "trace_id",
+          "idempotency_key"
+        ],
+        "title": "LeadIntakeIn",
+        "type": "object"
+      },
+      "LeadIntakeResponse": {
+        "properties": {
+          "deduplicated": {
+            "default": false,
+            "title": "Deduplicated",
+            "type": "boolean"
+          },
+          "lead_reference": {
+            "title": "Lead Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead_reference"
+        ],
+        "title": "LeadIntakeResponse",
+        "type": "object"
+      },
       "LeadTimeItem": {
         "description": "供应商交期行（B.8：material_code/lead_time_days）。",
         "properties": {
@@ -6781,6 +6950,252 @@
           "end"
         ],
         "title": "PeriodWindowOut",
+        "type": "object"
+      },
+      "PersonLifecycleDeliveryResponse": {
+        "properties": {
+          "attempt_count": {
+            "title": "Attempt Count",
+            "type": "integer"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "delivery_id": {
+            "title": "Delivery Id",
+            "type": "integer"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_system": {
+            "title": "Target System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "delivery_id",
+          "event_id",
+          "target_system",
+          "status",
+          "attempt_count"
+        ],
+        "title": "PersonLifecycleDeliveryResponse",
+        "type": "object"
+      },
+      "PersonLifecycleEventIn": {
+        "properties": {
+          "correlation_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "employment_action": {
+            "enum": [
+              "offboard",
+              "rehire"
+            ],
+            "title": "Employment Action",
+            "type": "string"
+          },
+          "event_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "enum": [
+              "person.offboarded",
+              "person.reinstated"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "event_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Event Version",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "object_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Object Id",
+            "type": "string"
+          },
+          "object_type": {
+            "const": "Person",
+            "title": "Object Type",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "occurred_by": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Occurred By",
+            "type": "string"
+          },
+          "person": {
+            "additionalProperties": true,
+            "title": "Person",
+            "type": "object"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source_system": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Source System",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "tenant_id",
+          "source_system",
+          "object_type",
+          "object_id",
+          "revision",
+          "occurred_at",
+          "effective_at",
+          "correlation_id",
+          "trace_id",
+          "idempotency_key",
+          "person",
+          "status",
+          "employment_action",
+          "occurred_by"
+        ],
+        "title": "PersonLifecycleEventIn",
+        "type": "object"
+      },
+      "PersonLifecycleEventResponse": {
+        "properties": {
+          "deliveries": {
+            "items": {
+              "$ref": "#/components/schemas/PersonLifecycleDeliveryResponse"
+            },
+            "title": "Deliveries",
+            "type": "array"
+          },
+          "duplicate": {
+            "default": false,
+            "title": "Duplicate",
+            "type": "boolean"
+          },
+          "effective_at": {
+            "format": "date-time",
+            "title": "Effective At",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "object_id": {
+            "title": "Object Id",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "status",
+          "revision",
+          "event_type",
+          "object_id",
+          "effective_at"
+        ],
+        "title": "PersonLifecycleEventResponse",
         "type": "object"
       },
       "PolicyCreateRequest": {
@@ -17760,6 +18175,365 @@
         "summary": "周期类型枚举（含边界说明）",
         "tags": [
           "periods"
+        ]
+      }
+    },
+    "/api/v1/person-lifecycle/admin/events/{event_id}/summary": {
+      "get": {
+        "operationId": "lifecycle_summary_api_v1_person_lifecycle_admin_events__event_id__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Lifecycle Summary Api V1 Person Lifecycle Admin Events  Event Id  Summary Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lifecycle Summary",
+        "tags": [
+          "person-lifecycle-admin"
+        ]
+      }
+    },
+    "/api/v1/person-lifecycle/deliveries": {
+      "get": {
+        "operationId": "get_deliveries_api_v1_person_lifecycle_deliveries_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Get Deliveries Api V1 Person Lifecycle Deliveries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Deliveries",
+        "tags": [
+          "person-lifecycle"
+        ]
+      }
+    },
+    "/api/v1/person-lifecycle/events": {
+      "post": {
+        "operationId": "intake_event_api_v1_person_lifecycle_events_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-AEOS-Key-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Aeos-Key-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-AEOS-Timestamp",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Aeos-Timestamp"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-AEOS-Signature",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Aeos-Signature"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonLifecycleEventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonLifecycleEventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR：参数缺失或格式错误"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "UNAUTHENTICATED：未认证或凭据无效"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Intake Event",
+        "tags": [
+          "person-lifecycle"
+        ]
+      }
+    },
+    "/api/v1/person-lifecycle/events/{event_id}": {
+      "get": {
+        "operationId": "get_event_api_v1_person_lifecycle_events__event_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonLifecycleEventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Event",
+        "tags": [
+          "person-lifecycle"
+        ]
+      }
+    },
+    "/api/v1/person-lifecycle/events/{event_id}/retry": {
+      "post": {
+        "operationId": "retry_event_api_v1_person_lifecycle_events__event_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Retry Event Api V1 Person Lifecycle Events  Event Id  Retry Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry Event",
+        "tags": [
+          "person-lifecycle"
+        ]
+      }
+    },
+    "/api/v1/public/lead-intake": {
+      "post": {
+        "operationId": "receive_lead_api_v1_public_lead_intake_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadIntakeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadIntakeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR：参数缺失或格式错误"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "UNAUTHENTICATED：未认证或凭据无效"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "FORBIDDEN：权限不足（scope/权限不满足）；TENANT_SUSPENDED：租户已暂停或状态异常"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "接收官网 LeadIntakeV1（仅服务身份）",
+        "tags": [
+          "public-lead-intake"
         ]
       }
     },

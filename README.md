@@ -11,8 +11,8 @@ flowchart LR
         web["web<br/>React 18 + Vite + Antd5<br/>（nginx 托管，/api 反代）"]
     end
     subgraph 后端
-        api["api<br/>FastAPI 模块化单体<br/>auth / registry / events"]
-        worker["worker<br/>Outbox 分发 + admission 预审<br/>+ 实时流消费（V1.3，可选）<br/>+ 主数据兜底（V1.3，可选）<br/>（SKIP LOCKED / 指数退避）"]
+    api["api<br/>FastAPI 模块化单体<br/>auth / registry / events / lead-intake"]
+    worker["worker<br/>Outbox 分发 + Inbox 幂等<br/>+ admission 预审<br/>+ 实时流消费（V1.3，可选）<br/>+ 主数据兜底（V1.3，可选）<br/>（SKIP LOCKED / 指数退避）"]
     end
     db[("PostgreSQL 16<br/>15 Schema + RLS")]
     web -- "/api（nginx 反代）" --> api
@@ -60,7 +60,7 @@ docker compose -f deploy/docker-compose.dev.yml -f deploy/docker-compose.realtim
 | 管理员 | `admin` / `Admin@123!` | 平台管理员（is_platform_admin），租户 `default` |
 | 演示用户 | `manager1` / `Admin@123!` | MANAGER 角色 |
 | 演示用户 | `analyst1` / `Admin@123!` | ANALYST 角色 |
-| API Key | `X-API-Key: edp-dev-agent-hub-key` | 服务主体 `agent-hub`，scopes：readonly / write:event / write:registry |
+| API Key | `X-API-Key: edp-dev-agent-hub-key` | 服务主体 `agent-hub`，scopes：readonly / write:event / write:registry / write:lead |
 
 ### 常用端口
 
@@ -96,8 +96,8 @@ web 容器构建时 `VITE_API_BASE` 显式置空 = 同源相对路径，经 ngin
 
 ```
 backend/                  uv workspace 根
-  apps/api/               FastAPI 服务（edp_api：core + modules/{auth,tenantmgmt,platform,registry,events}）
-  apps/worker/            Outbox Worker（edp_worker）
+  apps/api/               FastAPI 服务（edp_api：core + modules/{auth,tenantmgmt,platform,registry,events,lead_intake}）
+  apps/worker/            Outbox + Inbox Worker（edp_worker）
   packages/adapters/      源系统适配器基座（edp_adapters）
   migrations/             Alembic（versions/{platform,master,event,misc}，0001~0007）
   tests/{unit,integration}/  pytest（integration = testcontainers 真 PG）
@@ -116,6 +116,12 @@ deploy/                   docker-compose.dev.yml（+ 本地端口 override）、
 契约冻结基线与变更评审流程（PR + Tech Lead 评审 + SDK 重生成三联动）见 [contracts/README.md](contracts/README.md)。
 后端契约漂移 → `contract-export --check` / CI `contract-gate` 失败；SDK 指纹不符 → 前端 `check-contract-fingerprint.mjs` 失败。
 
+## 官网 LeadIntakeV1 内部入口
+
+`POST /api/v1/public/lead-intake` 仅供 Public BFF 使用，必须携带 EDP API Key，且该服务主体仅授予当前租户的 `write:lead` scope。请求体按 `LeadIntakeV1` 严格校验；认证租户覆盖并校验请求中的 `tenant_id`，重复的 `(tenant_id, idempotency_key)` 只保留一条 `event.lead_intakes`，并与 `lead.intake.received` Outbox 同事务提交。该路径不对官网直接开放。
+
+Worker 配置 `EDP_CRM_LEAD_TARGET_URL` 和 `EDP_CRM_LEAD_TARGET_TOKEN` 后，才注册 CRM Lead 订阅者；服务令牌缺失会拒绝启动。订阅者只消费 `lead.intake.received`，沿用 Inbox 幂等，并以 `X-Idempotency-Key` 投递到 CRM 的内部 AEOS 入站端点。
+
 ## W1 交付清单（14 任务对照）
 
 | 任务 | 状态 | 一行摘要 |
@@ -126,6 +132,8 @@ deploy/                   docker-compose.dev.yml（+ 本地端口 override）、
 | EDP-004 | ✅ | Registry API：upsert（乐观锁 409）、组合键查询、history |
 | EDP-005 | ✅ | Events API：批量入库（UUIDv5 幂等）、Idempotency-Key 重放去重、查询 |
 | EDP-006 | ✅ | Outbox 写侧 + Worker：SKIP LOCKED、指数退避、按租户循环、异常隔离 |
+| AEOS-P1-EDP-INBOX | ✅ | Inbox 消费幂等：租户/消费者/对象修订唯一键、失败重试、已处理跳过 |
+| AEOS-P1-LEAD-INTAKE | ✅ | Public BFF → EDP LeadIntakeV1：服务身份、租户绑定、幂等落库与事务 Outbox |
 | EDP-007 | ✅ | OpenAPI 导出冻结：contracts/ 快照 + sha256 指纹 + 变更评审流程 |
 | EDP-022 | ✅ | 租户数据模型与 RLS：跨租户隔离矩阵用例进 CI（A 读写 B → 0 行/404/403） |
 | EDP-023 | ✅ | 租户上下文中间件：JWT/API Key 绑定、SET LOCAL、租户状态守卫 |
