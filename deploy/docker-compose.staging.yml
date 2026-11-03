@@ -220,6 +220,10 @@ services:
       EDP_DATABASE_URL: postgresql+asyncpg://edp_app:edp_app@haproxy:5432/edp
       # JWT 密钥经本地 .env 注入（W6 安全剔除；与 api 同值）
       EDP_JWT_SECRET: ${EDP_JWT_SECRET:?EDP_JWT_SECRET 未设置（本地 .env 注入，勿入库）}
+      # 可选：官网线索 Outbox → CRM；URL 已配置但令牌缺失时 Worker 拒绝启动
+      EDP_CRM_LEAD_TARGET_URL: ${EDP_CRM_LEAD_TARGET_URL:-}
+      EDP_CRM_LEAD_TARGET_TOKEN: ${EDP_CRM_LEAD_TARGET_TOKEN:-}
+      EDP_CRM_LEAD_TARGET_TIMEOUT_S: ${EDP_CRM_LEAD_TARGET_TIMEOUT_S:-5}
 
   # 前端：nginx 托管 SPA + /api 反代到 api 服务（VITE_API_BASE 构建期置空 = 同源相对路径）
   web:

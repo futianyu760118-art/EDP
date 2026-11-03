@@ -1,4 +1,6 @@
-"""events ORM 映射：event.events + event.outbox（表由迁移 0001/0003 建立）。
+"""events ORM 映射：event.events + event.outbox + event.inbox。
+
+事件和 Outbox 由迁移 0003 建立，Inbox 由 Phase 1 迁移 0021 建立。
 
 ORM 不参与迁移（DDL 单一事实来源 = 设计文档附录 A 迁移链）；沿袭 registry
 约定：ORM 列不声明 ForeignKey（跨表外键以迁移 DDL 为准——引用目标在其他
@@ -83,6 +85,37 @@ class Outbox(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    created_by: Mapped[str | None] = mapped_column(Text)
+    updated_by: Mapped[str | None] = mapped_column(Text)
+
+
+class Inbox(Base):
+    """Consumer Inbox ledger used to converge at-least-once deliveries."""
+
+    __tablename__ = "inbox"
+    __table_args__ = {"schema": "event"}
+
+    inbox_id: Mapped[int] = mapped_column(
+        BigInteger, Identity(always=True), primary_key=True
+    )
+    tenant_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    consumer: Mapped[str] = mapped_column(Text, nullable=False)
+    source_system: Mapped[str] = mapped_column(Text, nullable=False)
+    object_type: Mapped[str] = mapped_column(Text, nullable=False)
+    object_id: Mapped[str] = mapped_column(Text, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    event_type: Mapped[str] = mapped_column(Text, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="PENDING")
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
