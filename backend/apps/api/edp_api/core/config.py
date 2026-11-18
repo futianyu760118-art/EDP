@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     fac_base_url: str = ""
     fac_bearer_token: str = ""
     fac_timeout_seconds: float = 10.0
+    plm_base_url: str = ""
+    plm_bearer_token: str = ""
+    plm_tenant_id: str = ""
+    plm_timeout_seconds: float = 10.0
+    plm_poll_interval_seconds: float = 5.0
+    plm_batch_size: int = 50
     app_env: str = "dev"
 
 
