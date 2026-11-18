@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -10,42 +9,33 @@ from edp_worker import fac_subscriber
 from edp_worker.fac_subscriber import FACWebhookSubscriber
 
 
-class _Response:
-    def __init__(self, status_code: int = 200, text: str = "") -> None:
-        self.status_code = status_code
-        self.text = text
+CALLS: list[dict] = []
+RESPONSE = (200, "")
 
 
-class _Client:
-    response = _Response()
-    calls: list[dict[str, Any]] = []
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-    async def __aenter__(self) -> _Client:
-        return self
-
-    async def __aexit__(self, *args: Any) -> bool:
-        return False
-
-    async def post(
-        self,
-        url: str,
-        json: Any = None,
-        headers: dict[str, str] | None = None,
-    ) -> _Response:
-        type(self).calls.append(
-            {"url": url, "json": json, "headers": headers or {}}
-        )
-        return type(self).response
+def _fake_post_json(
+    url: str,
+    body: dict,
+    headers: dict[str, str],
+    timeout: float,
+) -> tuple[int, str]:
+    CALLS.append(
+        {
+            "url": url,
+            "body": body,
+            "headers": headers,
+            "timeout": timeout,
+        }
+    )
+    return RESPONSE
 
 
 @pytest.fixture(autouse=True)
-def _patch_http(monkeypatch: pytest.MonkeyPatch) -> None:
-    _Client.calls = []
-    _Client.response = _Response(200)
-    monkeypatch.setattr(fac_subscriber.httpx, "AsyncClient", _Client)
+def _patch_http(monkeypatch: pytest.MonkeyPatch):
+    global RESPONSE
+    CALLS.clear()
+    RESPONSE = (200, "")
+    monkeypatch.setattr(fac_subscriber, "_post_json", _fake_post_json)
 
 
 def _message(*, source_system: str, event_type: str, data: dict) -> OutboxMessage:
@@ -85,12 +75,12 @@ async def test_m05_inquiry_event_is_forwarded_to_fac() -> None:
         base_url="http://fac.local", token="tok"
     ).on_event(msg)
 
-    sent = _Client.calls[-1]
+    sent = CALLS[-1]
     assert sent["url"] == (
         "http://fac.local/api/v1/fac/integration/m02/crm-aeos-event"
     )
-    assert sent["json"]["ingress_system"] == "M02"
-    assert sent["json"]["event"] == aeos_event
+    assert sent["body"]["ingress_system"] == "M02"
+    assert sent["body"]["event"] == aeos_event
     assert sent["headers"]["Authorization"] == "Bearer tok"
 
 
@@ -112,10 +102,10 @@ async def test_m04_bom_event_is_forwarded_to_fac() -> None:
     )
     await FACWebhookSubscriber(base_url="http://fac.local").on_event(msg)
 
-    sent = _Client.calls[-1]
+    sent = CALLS[-1]
     assert sent["url"].endswith("/api/v1/fac/integration/m02/plm-event")
-    assert sent["json"]["event_id"] == "PLM-EVT-13"
-    assert sent["json"]["event"] == plm_event
+    assert sent["body"]["event_id"] == "PLM-EVT-13"
+    assert sent["body"]["event"] == plm_event
 
 
 async def test_unrelated_event_is_ignored() -> None:
@@ -125,11 +115,12 @@ async def test_unrelated_event_is_ignored() -> None:
         data={"aeos_event": {}},
     )
     await FACWebhookSubscriber(base_url="http://fac.local").on_event(msg)
-    assert _Client.calls == []
+    assert CALLS == []
 
 
 async def test_fac_http_failure_nacks_for_outbox_retry() -> None:
-    _Client.response = _Response(500, "boom")
+    global RESPONSE
+    RESPONSE = (500, "boom")
     msg = _message(
         source_system="M05",
         event_type="inquiry.upserted",
