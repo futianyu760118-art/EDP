@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 
 import pytest
-
 from edp_api.core.config import Settings
 from edp_worker import plm_puller
 
