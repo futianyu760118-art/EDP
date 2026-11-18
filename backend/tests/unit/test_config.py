@@ -31,6 +31,9 @@ def test_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.idempotency_ttl_seconds == 86400
     assert s.outbox_max_retries == 8
     assert s.outbox_backoff_base_seconds == 5.0
+    assert s.fac_base_url == ""
+    assert s.fac_bearer_token == ""
+    assert s.fac_timeout_seconds == 10.0
     assert s.app_env == "dev"
 
 
@@ -47,6 +50,9 @@ def test_env_overrides_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EDP_IDEMPOTENCY_TTL_SECONDS", "60")
     monkeypatch.setenv("EDP_OUTBOX_MAX_RETRIES", "3")
     monkeypatch.setenv("EDP_OUTBOX_BACKOFF_BASE_SECONDS", "2.5")
+    monkeypatch.setenv("EDP_FAC_BASE_URL", "http://fac:8000")
+    monkeypatch.setenv("EDP_FAC_BEARER_TOKEN", "fac-secret")
+    monkeypatch.setenv("EDP_FAC_TIMEOUT_SECONDS", "3.5")
     monkeypatch.setenv("EDP_APP_ENV", "prod")
 
     s = Settings(_env_file=None)
@@ -61,6 +67,9 @@ def test_env_overrides_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.idempotency_ttl_seconds == 60
     assert s.outbox_max_retries == 3
     assert s.outbox_backoff_base_seconds == 2.5
+    assert s.fac_base_url == "http://fac:8000"
+    assert s.fac_bearer_token == "fac-secret"
+    assert s.fac_timeout_seconds == 3.5
     assert s.app_env == "prod"
 
 
