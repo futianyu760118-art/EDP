@@ -25,6 +25,7 @@ from edp_api.core.events import (
 
 from edp_worker.fac_subscriber import FACWebhookSubscriber
 from edp_worker.outbox_dispatch import run_forever
+from edp_worker.plm_puller import run_forever as run_plm_forever
 
 logger = logging.getLogger("edp.worker")
 
@@ -53,7 +54,10 @@ async def _work() -> None:
             )
         )
     logger.info("worker started subscribers=%d", len(subscribers))
-    await run_forever(engine, list(subscribers))
+    tasks = [asyncio.create_task(run_forever(engine, list(subscribers)))]
+    if settings.plm_base_url.strip() and settings.plm_tenant_id.strip():
+        tasks.append(asyncio.create_task(run_plm_forever(engine, settings=settings)))
+    await asyncio.gather(*tasks)
 
 
 async def main() -> None:
