@@ -71,7 +71,8 @@ def _read_json(value: Any, default: Any) -> Any:
 
 
 def _object_type(value: str) -> str:
-    value = re.sub(r"(?<!^)(?=[A-Z])", "_", value).upper()
+    value = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", value)
+    value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", value).upper()
     value = re.sub(r"[^A-Z0-9_]", "_", value)
     return value or "UNKNOWN"
 
