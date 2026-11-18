@@ -306,6 +306,7 @@ async def ingest_batch(
                 "occurred_at": normalize_occurred_at(ev.occurred_at).isoformat(),
                 "risk_level": ev.risk_level,
                 "source_system": ev.source_system,
+                "data": ev.data,
             },
             actor=actor,
         )
