@@ -7,9 +7,11 @@ marks the row FAILED.
 
 from __future__ import annotations
 
+import asyncio
+import json
 from dataclasses import dataclass
-
-import httpx
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from edp_api.core.events import OutboxMessage
 
@@ -21,6 +23,27 @@ M04_EVENT_TYPES = {
     "ProductConfigurationConfirmed",
     "SpecificationConfirmed",
 }
+
+
+def _post_json(
+    url: str,
+    body: dict,
+    headers: dict[str, str],
+    timeout: float,
+) -> tuple[int, str]:
+    request = Request(
+        url,
+        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return int(response.status), response.read().decode("utf-8", errors="replace")
+    except HTTPError as exc:
+        return int(exc.code), exc.read().decode("utf-8", errors="replace")
+    except URLError as exc:
+        raise RuntimeError(f"FAC webhook connection failed url={url}: {exc}") from exc
 
 
 @dataclass(slots=True)
@@ -74,12 +97,16 @@ class FACWebhookSubscriber:
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(url, json=body, headers=headers)
-
-        if 200 <= response.status_code < 300 or response.status_code == 409:
+        status, response_text = await asyncio.to_thread(
+            _post_json,
+            url,
+            body,
+            headers,
+            self.timeout,
+        )
+        if 200 <= status < 300 or status == 409:
             return
         raise RuntimeError(
-            f"FAC webhook failed status={response.status_code} url={url} "
-            f"body={response.text[:500]}"
+            f"FAC webhook failed status={status} url={url} "
+            f"body={response_text[:500]}"
         )
