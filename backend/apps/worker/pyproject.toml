@@ -5,6 +5,7 @@ description = "EDP Outbox Worker（事件分发）"
 requires-python = ">=3.12"
 dependencies = [
     "edp-api",
+    "httpx>=0.27",
 ]
 
 [tool.uv.sources]
