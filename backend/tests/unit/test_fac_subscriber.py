@@ -3,11 +3,9 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-
 from edp_api.core.events import OutboxMessage
 from edp_worker import fac_subscriber
 from edp_worker.fac_subscriber import FACWebhookSubscriber
-
 
 CALLS: list[dict] = []
 RESPONSE = (200, "")
