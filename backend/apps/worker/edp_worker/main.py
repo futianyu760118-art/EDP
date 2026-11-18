@@ -13,6 +13,7 @@ import asyncio
 import logging
 import signal
 
+from edp_api.core.config import get_settings
 from edp_api.core.db import dispose_engine, get_engine
 from edp_api.core.events import (
     EBMSNotifyStubSubscriber,
@@ -22,6 +23,7 @@ from edp_api.core.events import (
     subscribers,
 )
 
+from edp_worker.fac_subscriber import FACWebhookSubscriber
 from edp_worker.outbox_dispatch import run_forever
 
 logger = logging.getLogger("edp.worker")
@@ -41,6 +43,15 @@ async def _work() -> None:
     clear_subscribers()
     register_subscriber(LoggingSubscriber())
     register_subscriber(EBMSNotifyStubSubscriber())
+    settings = get_settings()
+    if settings.fac_base_url.strip():
+        register_subscriber(
+            FACWebhookSubscriber(
+                base_url=settings.fac_base_url,
+                token=settings.fac_bearer_token,
+                timeout=settings.fac_timeout_seconds,
+            )
+        )
     logger.info("worker started subscribers=%d", len(subscribers))
     await run_forever(engine, list(subscribers))
 

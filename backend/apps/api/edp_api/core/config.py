@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     idempotency_ttl_seconds: int = 86400
     outbox_max_retries: int = 8
     outbox_backoff_base_seconds: float = 5.0
+    fac_base_url: str = ""
+    fac_bearer_token: str = ""
+    fac_timeout_seconds: float = 10.0
     app_env: str = "dev"
 
 
