@@ -15,7 +15,6 @@ from urllib.request import Request, urlopen
 
 from edp_api.core.events import OutboxMessage
 
-
 M05_EVENT_TYPES = {"inquiry.upserted"}
 M04_EVENT_TYPES = {
     "BOMReleased",
