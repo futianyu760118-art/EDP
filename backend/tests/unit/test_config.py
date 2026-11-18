@@ -34,6 +34,12 @@ def test_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.fac_base_url == ""
     assert s.fac_bearer_token == ""
     assert s.fac_timeout_seconds == 10.0
+    assert s.plm_base_url == ""
+    assert s.plm_bearer_token == ""
+    assert s.plm_tenant_id == ""
+    assert s.plm_timeout_seconds == 10.0
+    assert s.plm_poll_interval_seconds == 5.0
+    assert s.plm_batch_size == 50
     assert s.app_env == "dev"
 
 
@@ -53,6 +59,15 @@ def test_env_overrides_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EDP_FAC_BASE_URL", "http://fac:8000")
     monkeypatch.setenv("EDP_FAC_BEARER_TOKEN", "fac-secret")
     monkeypatch.setenv("EDP_FAC_TIMEOUT_SECONDS", "3.5")
+    monkeypatch.setenv("EDP_PLM_BASE_URL", "http://plm:8080")
+    monkeypatch.setenv("EDP_PLM_BEARER_TOKEN", "plm-jwt")
+    monkeypatch.setenv(
+        "EDP_PLM_TENANT_ID",
+        "11111111-1111-1111-1111-111111111111",
+    )
+    monkeypatch.setenv("EDP_PLM_TIMEOUT_SECONDS", "4.5")
+    monkeypatch.setenv("EDP_PLM_POLL_INTERVAL_SECONDS", "6.0")
+    monkeypatch.setenv("EDP_PLM_BATCH_SIZE", "25")
     monkeypatch.setenv("EDP_APP_ENV", "prod")
 
     s = Settings(_env_file=None)
@@ -70,6 +85,12 @@ def test_env_overrides_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.fac_base_url == "http://fac:8000"
     assert s.fac_bearer_token == "fac-secret"
     assert s.fac_timeout_seconds == 3.5
+    assert s.plm_base_url == "http://plm:8080"
+    assert s.plm_bearer_token == "plm-jwt"
+    assert s.plm_tenant_id == "11111111-1111-1111-1111-111111111111"
+    assert s.plm_timeout_seconds == 4.5
+    assert s.plm_poll_interval_seconds == 6.0
+    assert s.plm_batch_size == 25
     assert s.app_env == "prod"
 
 
